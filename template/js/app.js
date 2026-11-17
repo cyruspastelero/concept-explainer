@@ -156,6 +156,7 @@ function chapterView(chapter, index, chapters, data, ctx) {
   const section = h('section', { class: 'view', 'data-view': chapter.key, hidden: true, 'aria-labelledby': `view-${chapter.key}-title` },
     viewHead(chapter.key, `Chapter ${index + 1} of ${chapters.length}`, chapter.title, chapter.lead),
     body,
+    fbChapterPanel(chapter.key, data, ctx.learning),
     pager(chapters, index));
   let controller = null;
   try {
@@ -259,9 +260,11 @@ function boot() {
   const viewed = viewedStore(data.meta);
   const registry = themeRegistry();
   const shell = buildShell(data, chapters, context, registry);
-  const ctx = { chapters, viewed, context };
+  // Reader signals for the next run (null on hosted copies): references/learning-loop.md.
+  const learning = sigStart(data, context);
+  const ctx = { chapters, viewed, context, learning };
   const views = [overviewView(data, ctx), ...chapters.map((c, i) => chapterView(c, i, chapters, data, ctx)),
-    settingsView(registry, { context, config: context.config || null, extra: [explainerShareGroup(data, context)] })];
+    settingsView(registry, { context, config: context.config || null, extra: [lrnSendGroup(learning), explainerShareGroup(data, context)] })];
   const meta = data.meta;
   const stamp = [meta.generatedAt && `Generated ${displayDate(meta.generatedAt)}`, meta.commit && `at ${String(meta.commit).slice(0, 7)}`].filter(Boolean).join(' ');
   const main = h('main', { id: 'main', class: 'main-col', tabindex: '-1' },

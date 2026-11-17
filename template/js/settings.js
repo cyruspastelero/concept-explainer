@@ -138,7 +138,8 @@ function readingGroup(registry) {
     h('legend', { class: 'settings-legend' }, h('span', null, 'Reading'), h('span', { class: 'eyebrow quiet' }, 'This browser only')),
     settingRow('set-theme', 'Theme', labelled(themeSwitch(registry), 'set-theme'), 'System follows your device.'),
     settingRow('set-style', 'Style', labelled(styleSwitch(registry), 'set-style'), 'Clean is calm and grey. Playful is bright and rounded.'),
-    READING_PREFS.map((pref) => settingRow(`set-${pref.key}`, pref.label, labelled(readingSwitch(registry, pref), `set-${pref.key}`), pref.hint)));
+    READING_PREFS.map((pref) => settingRow(`set-${pref.key}`, pref.label, labelled(readingSwitch(registry, pref), `set-${pref.key}`), pref.hint)),
+    lrnReadingRows(registry));
 }
 
 function settingsView(registry, { context = {}, config = null, extra = [] } = {}) {

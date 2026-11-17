@@ -149,6 +149,7 @@ function readHubHash() {
   const raw = window.location.hash.replace(/^#/, '');
   if (raw === 'changes') return { view: 'changes', query: '' };
   if (raw === 'settings') return { view: 'settings', query: '' };
+  if (raw === 'insights') return { view: 'insights', query: '' };
   const match = raw.match(/^search\/(.*)$/);
   if (!match) return { view: 'all', query: '' };
   try {
@@ -179,6 +180,7 @@ function hubModel(data, context) {
     views: [
       { key: 'all', nav: 'All explainers', count: explainers.length },
       { key: 'changes', nav: 'Recent changes', count: changes.length },
+      ...(data && data.insights ? [{ key: 'insights', nav: 'Insights', count: Number(data.insights.totals && data.insights.totals.explainMore) || 0 }] : []),
     ],
   };
 }
@@ -287,15 +289,17 @@ function hubPaintChanges(model, ui, author, setAuthor) {
 }
 
 // Show one view, name it in the bar and the title, and move focus to it.
-function hubShowView(view, { allView, changesView, settings, shell }) {
-  allView.hidden = view !== 'all';
-  changesView.hidden = view !== 'changes';
-  settings.section.hidden = view !== 'settings';
-  setNavCurrent(shell.links, view);
-  const viewName = { changes: 'Recent changes', settings: 'Settings' }[view] || 'All explainers';
+function hubShowView(view, { allView, changesView, settings, shell, insights }) {
+  const shown = view === 'insights' && !insights ? 'all' : view;
+  allView.hidden = shown !== 'all';
+  changesView.hidden = shown !== 'changes';
+  settings.section.hidden = shown !== 'settings';
+  if (insights) insights.section.hidden = shown !== 'insights';
+  setNavCurrent(shell.links, shown);
+  const viewName = { changes: 'Recent changes', settings: 'Settings', insights: 'Insights' }[shown] || 'All explainers';
   shell.barView.textContent = viewName;
-  document.title = `${view === 'all' ? 'Explainer library' : viewName} · Concept Explainer`;
-  return ({ changes: changesView, settings: settings.section }[view] || allView).querySelector('h1');
+  document.title = `${shown === 'all' ? 'Explainer library' : viewName} · Concept Explainer`;
+  return ({ changes: changesView, settings: settings.section, insights: insights && insights.section }[shown] || allView).querySelector('h1');
 }
 
 // Export exactly what the hub shows: the picked cards, else every explainer
@@ -424,6 +428,7 @@ function bootLibrary() {
     context, config: context.config || (data && data.config) || null, extra: [hubShareGroup(context, getSelection)],
   });
   const [allView, changesView] = [hubAllView(model, ui), hubChangesView(model, ui)];
+  const insights = insMount(data, context, model.titles);
   const paintPicks = (shown = explainers.filter((e) => shownSlugs().includes(e.slug))) => fill(ui.pickBar, ...hubPickBar(selected, shown, renderAll));
 
   function renderAll() {
@@ -439,9 +444,9 @@ function bootLibrary() {
 
   function route({ initial = false } = {}) {
     const { view, query } = readHubHash();
-    const heading = hubShowView(view, { allView, changesView, settings, shell });
+    const heading = hubShowView(view, { allView, changesView, settings, shell, insights });
     if (view === 'all' && input.value !== query) input.value = query;
-    if (view === 'all') renderAll(); else if (view === 'changes') renderChanges();
+    if (view === 'all') renderAll(); else if (view === 'changes') renderChanges(); else if (view === 'insights' && insights) insights.refresh();
     if (initial && !window.location.hash) return;
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     hubFocusAfterRoute(input, heading, { searchNext: focusSearchNext, skipHeading: initial && query });
@@ -449,7 +454,7 @@ function bootLibrary() {
   }
 
   wireHubKeys(ui, shell, explainers.length > 0, renderAll, () => { focusSearchNext = true; window.location.hash = 'all'; });
-  mountHub(app, shell, registry, [allView, changesView, settings.section]);
+  mountHub(app, shell, registry, [allView, changesView, insights && insights.section, settings.section].filter(Boolean));
   window.addEventListener('hashchange', () => route());
   route({ initial: true });
   if (readHubHash().query) input.focus();

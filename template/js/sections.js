@@ -47,6 +47,7 @@ function renderOverview(data, mount, ctx) {
         list(meta.stack).map((item) => h('li', null, tag(item))))),
     nextSlot,
     progressSlot,
+    lrnChangedCard(data),
     glancePanel(data),
     chapters.length > 0 && h('section', { class: 'ov-chapters', 'aria-labelledby': 'ov-chapters-title' },
       h('div', { class: 'ov-section-head' }, h('h2', { id: 'ov-chapters-title' }, 'Chapters'),
