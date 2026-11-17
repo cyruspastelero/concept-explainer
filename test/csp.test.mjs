@@ -39,6 +39,8 @@ test('the policy allows exactly the page\'s own inline blocks, by hash, and noth
     found.forEach((block) => assert.ok(csp.includes(hash(block)), `${name}: a block is not hashed`));
     assert.match(csp, /default-src 'none'/);
     assert.match(csp, /font-src 'self'/);
+    assert.match(csp, /worker-src 'self'/, 'so the app can register /sw.js');
+    assert.match(csp, /manifest-src 'self'/, 'so the app can link /manifest.webmanifest');
     assert.doesNotMatch(csp.replace("style-src-attr 'unsafe-inline'", ''), /unsafe-inline|unsafe-eval|https:|\*/, name);
     assert.doesNotMatch(csp, /frame-ancestors/, 'ignored in a meta tag, so it is sent by serve instead');
   });
