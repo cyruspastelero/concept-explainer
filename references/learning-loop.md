@@ -145,19 +145,35 @@ Up to 8 items. `route`, when given, is a section of this explainer. `because` is
 
 ## Hub summary
 
-The hub embeds this at every rebuild (`insights` in its data; `null` when learning is off), and `GET /api/insights` (token) returns the same as `{ insights }`:
+Two shapes. The hub page is served without a token while `library serve` runs, so it embeds **counts only**. The detail needs a token.
+
+**Embedded in the hub** (`insights` in its data, written at every rebuild; `null` when learning is off). No free text at all: no titles, notes, terms, reasons or prompts. Strings are slugs and the time; the page takes titles from its own manifest.
 
 ```json
 {
   "updatedAt": "…",
-  "explainMore": [{ "slug", "title", "flagId", "route", "href": "explainers/<slug>/index.html#<route>", "n", "notes": ["≤ 140 chars"], "updatedAt" }],
-  "weakQuiz": [{ "slug", "title", "flagId", "route", "href", "n", "firstWrong", "mostPicked" }],
-  "terms": [{ "term", "n", "explainers" }],
-  "refreshes": [{ "slug", "title", "reasons": ["open flags", "older than 30 days"], "openFlags", "command": "concept-explainer insights <slug>", "prompt": "Refresh the … explainer …" }]
+  "totals": { "explainMore": 2, "weakQuiz": 1, "terms": 3, "refreshes": 2 },
+  "explainers": [{ "slug": "acme-taskflow", "explainMore": 1, "explainMoreVotes": 3, "weakQuiz": 0, "openFlags": 1, "refresh": true }]
 }
 ```
 
-Never the raw reader profile, `knows`, the depth hint or notes files. Notes in it are reader notes, as text.
+`explainers` lists only explainers with open flags or a refresh due. `explainMore` and `weakQuiz` count open flags, and `explainMoreVotes` adds up their votes.
+
+**Detail: `GET /api/insights`** with `X-Concept-Explainer-Token` (per-run or device token) returns `{ insights }`:
+
+```json
+{
+  "updatedAt": "…",
+  "explainMore": [{ "slug", "title", "withheld?", "flagId", "route", "href": "explainers/<slug>/index.html#<route>", "n", "notes": ["≤ 140 chars"], "updatedAt" }],
+  "weakQuiz": [{ "slug", "title", "withheld?", "flagId", "route", "href", "n", "firstWrong", "mostPicked" }],
+  "terms": [{ "term", "n", "explainers" }],
+  "refreshes": [{ "slug", "title", "withheld?", "reasons": ["open flags", "older than 30 days"], "openFlags", "command": "concept-explainer insights <slug>", "prompt": "Refresh the … explainer …" }]
+}
+```
+
+The Insights view shows the embedded counts at once. Under serve with a token it fetches the detail; from `file://` (or without a token) it shows the counts and the command to copy, `concept-explainer insights`.
+
+A title that fails the shared text rules (`scripts/lib/untrusted-text.mjs`, without the command-line check) is replaced by the slug and the item gets `"withheld": true`; the refresh `prompt` then names the slug. Notes pass the same rules. `insights --json` does the same for each explainer's `title` and `subject` (a subject failing the subject rules becomes `null`, with `withheld: true`). Never the raw reader profile, `knows`, the depth hint or notes files.
 
 ## Commands
 

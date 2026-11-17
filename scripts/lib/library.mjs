@@ -12,7 +12,7 @@ import { NODE_KINDS } from './schema.mjs';
 import { buildSearchIndex } from './search-index.mjs';
 import { parseStyle } from './style.mjs';
 import { normalizeConfig, publicConfig, validateConfig } from './config.mjs';
-import { hubSummary } from './insights.mjs';
+import { hubCounts } from './insights.mjs';
 import {
   SLUG_PATTERN, baseSlugFor, chooseSlug, emptyManifest, entryFor, isManifest, sourceIdentity, upsertEntry, withoutEntry,
 } from './library-model.mjs';
@@ -222,7 +222,8 @@ export function writeHub(home, manifest, options = {}) {
   const pageManifest = { ...manifest, explainers: manifest.explainers.map(({ sourcePath, repoPath, ...entry }) => entry) };
   const index = manifest.explainers.flatMap((entry) => buildSearchIndex(entry.slug, readStoredData(paths, entry.slug) || { meta: entry }));
   // Reader insights for the hub's Insights view: counts, flags and short notes only.
-  const insights = config.learning === false ? null : hubSummary(home);
+  // Counts only: the hub is served without a token. Detail is GET /api/insights.
+  const insights = config.learning === false ? null : hubCounts(home);
   writeAtomic(paths.hub, buildLibrary(pageManifest, index, { templateDir: options.templateDir, style, config, kitHref: KIT_HREF, fontBase: 'fonts/', insights }));
   const kit = { kinds: NODE_KINDS, patterns: listPatterns(), version: packageVersion() };
   writeAtomic(paths.kit, buildGallery(kit, { templateDir: options.templateDir, context: { libraryHref: 'index.html', style, config }, fontBase: 'fonts/' }));

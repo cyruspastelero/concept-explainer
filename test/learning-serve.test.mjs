@@ -99,12 +99,18 @@ test('GET /api/insights returns the hub summary to a token holder only', async (
   assert.doesNotMatch(res.body, /struggles":\[\{"term".*knows|_reader/);
 });
 
-test('the hub embeds the insights summary after a rebuild', () => {
+test('the hub embeds counts only (it is served without a token); the notes are behind GET /api/insights', async () => {
   publishExplainer(taskflow, { home });
-  const data = hubData(readFileSync(libraryPaths(home).hub, 'utf8'));
-  assert.equal(data.insights.explainMore[0].slug, 'acme-taskflow');
-  assert.ok(data.insights.explainMore[0].notes.includes('Show the queue.'));
-  assert.ok(!('knows' in data.insights), 'never the raw reader profile');
+  const html = readFileSync(libraryPaths(home).hub, 'utf8');
+  const data = hubData(html);
+  const mine = data.insights.explainers.find((e) => e.slug === 'acme-taskflow');
+  assert.ok(mine.explainMore >= 1 && mine.openFlags >= 1);
+  assert.ok(data.insights.totals.explainMore >= 1);
+  assert.doesNotMatch(JSON.stringify(data.insights), /Show the queue|prompt|notes|title|term"/, 'no free text in the page');
+  assert.doesNotMatch(html, /Show the queue\./, 'no reader note anywhere in the served hub');
+  assert.equal((await send({ path: '/api/insights' })).status, 403, 'the detail needs a token');
+  const detail = JSON.parse((await send({ path: '/api/insights', headers: { [TOKEN_HEADER]: served.token } })).body).insights;
+  assert.ok(detail.explainMore.some((m) => m.notes.includes('Show the queue.')));
 });
 
 test('insights and notes files are never served', async () => {
