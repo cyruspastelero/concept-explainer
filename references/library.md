@@ -85,6 +85,9 @@ Two styles: `clean` (the default) and `playful`. The template draws both; the da
 | `budgetUsd` | a number of 0 or more, or `null` | `null` | skip the go-ahead wait when the estimate fits |
 | `confirmBeforeStart` | `true`, `false` | `true` | the estimate step |
 | `instructions` | plain text, at most 2,000 characters | `""` | extra guidance for the skill (house style, terms) |
+| `servePort` | 1024 to 65535 | `4747` | `library serve`, `launch` (see `references/launcher.md`) |
+| `serveIdleMinutes` | 0 to 1440, or `null` | `null` | idle stop (null: launcher 30, manual serve never) |
+| `learning` | `true`, `false` | `true` | the learning loop: reader signals, insights and agent notes (see `references/learning-loop.md`) |
 
 - `config set <key> <value>` checks the value and names the key on any error. Unknown keys are refused. `config set chapters.pr.risks off` sets one chapter. `config set visuals venn,cycle` sets a list. `config set budgetUsd none` clears the budget.
 - Reading is tolerant: a broken file or a bad value falls back to the default, key by key. Saving is strict.
@@ -197,6 +200,8 @@ JSON data blocks are not scripts, so they need no hash. `style-src-attr 'unsafe-
 
 When `libraryHref` is set, the page shows a Library link back to the hub.
 
+Every explainer page's context also carries `sections` (route to fingerprint), `build` (sha256 of its data) and `key` (slug, else `repo|title`) for the learning loop, and the hub's data carries `insights` (the summary, or `null` when learning is off). See `references/learning-loop.md`.
+
 ### Search index
 
 A flat array. One entry per searchable thing:
@@ -247,7 +252,7 @@ A page opened from `file://` cannot write files, so Settings there shows the cur
 - Binds to **127.0.0.1 only**, on a random port unless `--port` is given. Prints `http://127.0.0.1:<port>/index.html#token=<token>` and runs until Ctrl+C.
 - A fresh random **token** per run (48 hex characters) travels to the page in the URL fragment, so it never reaches a server log or a Referer header.
 - **Host** must be `127.0.0.1:<port>` on every request (blocks DNS rebinding); `localhost:<port>` gets a 308 to `127.0.0.1`, so there is one origin. The port is the library's own random one (`servePort`, picked once and kept); the installable app, pairing and `launch` are in `references/launcher.md`.
-- **Files:** `GET` and `HEAD` only, and only these: `/` and `/index.html` (the hub), `/kit.html`, `/explainers/<slug>/` and `/explainers/<slug>/index.html`, and `/fonts/<name>.woff2` and `/fonts/OFL.txt`. Everything else is not found, with or without the token: `library.json`, `config.json`, every `explainer.json`, temp, backup and corrupt files, dotfiles and `.lock`. Symlinks that leave the library are refused. Responses carry `nosniff`, `no-store`, `no-referrer` and `DENY` framing headers.
+- **Files:** `GET` and `HEAD` only, and only these: `/` and `/index.html` (the hub), `/kit.html`, `/explainers/<slug>/` and `/explainers/<slug>/index.html`, and `/fonts/<name>.woff2` and `/fonts/OFL.txt`. Everything else is not found, with or without the token: `library.json`, `config.json`, every `explainer.json`, `insights/` and `notes/`, temp, backup and corrupt files, dotfiles and `.lock`. Symlinks that leave the library are refused. Responses carry `nosniff`, `no-store`, `no-referrer` and `DENY` framing headers.
 - **Bodies:** nothing past the cap is kept; the answer is 413 with `Connection: close`, and the server then discards at most 1 MB or 1 s more of the upload before dropping the connection, so the client can read the 413 (closing with unread data resets the socket, and on Windows that loses the answer). Aborted uploads are dropped without an answer.
 - **API:** every call needs the token in `X-Concept-Explainer-Token`; writes also need the Origin. `GET /api/config` needs it too, since `instructions` may be private.
 - **CSP:** a page is served with the policy its build fixed (its meta tag), plus `frame-ancestors 'none'`, which works only as a header. The policy is never recomputed from the served file, so a page changed after its build gains nothing. A page without a meta tag gets `default-src 'none'`. Other files get `default-src 'none'; frame-ancestors 'none'`.

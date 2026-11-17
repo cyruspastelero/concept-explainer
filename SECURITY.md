@@ -14,6 +14,15 @@ These are in scope:
 - Writing outside the library folder or the Claude config folder
 - `library serve`: reading files outside the library, or writing without the token, from another origin or another host
 
+## Learning loop
+
+- Reader signals are counts, buckets and dates. They carry no identifiers, URLs or user agents; the only free text is a one-line note of up to 140 characters with no control, bidi or zero-width characters. Pages record only on `file://` and `127.0.0.1`, and only while the reader's toggle is on.
+- `POST /api/signals` needs the per-run or a device token, the right Origin and Host, JSON and at most 64 KB; batches are parsed strictly (unknown fields refused, prototype keys dropped) and a repeated batch id changes nothing. `GET /api/insights` needs a token and returns counts, flags and short notes only.
+- `<home>/insights/` and `<home>/notes/` are 0700 with 0600 files and are never served. The hub embeds only the summary, never the reader profile or notes files.
+- Agent notes are what the next agent reads, so they are the prompt-injection surface: items are short single lines, and code fences, markup, hidden characters, non-http(s) links, command-like lines and text addressed to an agent are refused. The skill and the CLI hand notes and insights back marked `untrusted`, and the skill treats them as evidence, never instructions.
+- `export` leaves insights and notes out unless `--with-insights`, and never sends the reader profile. Import rebuilds insights field by field (flags recomputed, local insights never overwritten) and keeps notes as `.imported.json` after the same checks.
+- To delete: the reader toggle in a browser, `insights reset`, `insights forget-reader`, `notes rm`, `library remove <slug>`, and `config set learning off` to stop recording.
+
 ## Design notes
 
 - Rendering uses `textContent` / `setAttribute` only. A test bans `innerHTML`, `eval` and `new Function`.

@@ -222,6 +222,17 @@ concept-explainer install --launcher    # macOS app, Linux menu entry or Windows
 
 Clicking it starts the library server on `127.0.0.1`, on a port picked at random for you and kept in your library's private `config.json` (if it is not already running), pairs your browser and opens the hub. If another program ever holds that port, the app says so instead of moving; `concept-explainer library serve --new-port` picks a new one (reinstall the browser app afterwards). In Chrome or Edge you can then install it as an app, and Safari can add it to the Dock; it keeps working offline for reading. The server stops itself after 30 idle minutes, and `uninstall --launcher` removes exactly what install wrote. Every explainer is still one HTML file you can share. How it works: [`references/launcher.md`](references/launcher.md).
 
+### It learns what to explain better
+
+Readers can mark a section "Clear", "Explain more" or "Too basic", and the quiz notes what tripped them. Those counts stay in your library on this machine (no accounts, no network beyond `127.0.0.1`). The next time the agent updates that explainer, it reads them, deepens what readers asked about, re-teaches the terms you keep looking up, and lists what changed because of you in a "Changed since last time" card. It also leaves itself short notes about the code for the next run.
+
+```sh
+concept-explainer insights acme-taskflow     # what readers needed, each with its n
+concept-explainer config set learning off    # stop recording and reading
+```
+
+How it works and what is stored: [`references/learning-loop.md`](references/learning-loop.md).
+
 ### Share
 
 Send one explainer, a topic or the whole library to someone else, who imports it into their own library.
