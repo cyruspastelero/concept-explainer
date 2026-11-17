@@ -173,3 +173,36 @@ test('a busy port is reused when it is ours, skipped when it is not', async () =
     foreign.close();
   }
 });
+
+test('health proves the server with an HMAC of a nonce; an impostor with our fingerprint is not reused', async () => {
+  const { healthProof, verifyServer } = await import('../scripts/lib/serve-state.mjs');
+  const ours = await startOrReuse({ home, port: 0 });
+  try {
+    const state = readServerState(home);
+    assert.match(state.secret, /^[0-9a-f]{64}$/);
+    const nonce = 'a'.repeat(32);
+    const health = JSON.parse((await send({ path: `/api/health?nonce=${nonce}`, port: ours.port })).body);
+    assert.equal(health.proof, healthProof(state.secret, nonce));
+    assert.ok(await verifyServer(home, ours.port), 'a genuine server is proven');
+  } finally {
+    await ours.close();
+  }
+  const seen = [];
+  const impostor = createServer((req, res) => {
+    seen.push(req.url);
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ app: 'concept-explainer', version: '9.9.9', instance: 'copied', proof: 'f'.repeat(64) }));
+  });
+  await new Promise((r) => impostor.listen(0, '127.0.0.1', r));
+  const squatted = impostor.address().port;
+  try {
+    const moved = await startOrReuse({ home, port: squatted, fallbackPorts: [0] });
+    assert.equal(moved.reused, false);
+    assert.notEqual(moved.port, squatted);
+    assert.match(moved.warning, /not this library's server/);
+    assert.ok(seen.every((u) => !/pair|token/.test(u)), 'the impostor got nothing but a health probe');
+    await moved.close();
+  } finally {
+    impostor.close();
+  }
+});
