@@ -1,7 +1,10 @@
 // Reader signal batches: what a page sends (POST /api/signals) or downloads
 // (<key>.signals.json). Untrusted input: strict shape, caps, no identifiers,
-// no URLs, and the only free text is a one-line note. Prototype keys are
+// no URLs, and the only free text is a one-line note that must pass the
+// shared rules in untrusted-text.mjs. Prototype keys are
 // dropped while parsing. Contract: references/learning-loop.md.
+
+import { textErrors } from './untrusted-text.mjs';
 
 export const SIGNALS_FORMAT = 'concept-explainer-signals';
 export const MAX_BATCH_BYTES = 64 * 1024;
@@ -60,7 +63,10 @@ function section(route, value, where) {
   }
   if (value.note !== undefined) {
     if (!out.vote || !['more', 'basic'].includes(out.vote.to)) refuse(`${where}: a note needs a vote of more or basic`);
-    out.note = plainText(value.note, `${where}.note`, NOTE_MAX);
+    // A note that fails the shared rules is dropped (and counted when merged); the vote still counts.
+    if (typeof value.note !== 'string') refuse(`${where}.note must be text`);
+    if (textErrors(value.note, `${where}.note`, { max: NOTE_MAX }).length) out.noteDropped = true;
+    else out.note = value.note;
   }
   return out;
 }

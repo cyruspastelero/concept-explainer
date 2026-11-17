@@ -67,7 +67,7 @@ test('unknown explainers, routes and stale fingerprints are dropped and counted'
       { key: 'nobody|Nothing', build: 'c'.repeat(64), sections: {}, quiz: {}, lookups: { glossary: {}, hints: {} } },
     ],
   });
-  assert.deepEqual(result.dropped, { explainers: 1, sections: 2, quiz: 0, lookups: 0 });
+  assert.deepEqual(result.dropped, { explainers: 1, sections: 2, quiz: 0, lookups: 0, notes: 0 });
   assert.deepEqual(Object.keys(readInsights(home, 'acme-taskflow').sections), ['map']);
 });
 

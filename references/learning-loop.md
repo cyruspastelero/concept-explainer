@@ -66,11 +66,11 @@ Recorded only on `file://` and `http://127.0.0.1:<port>`, never on hosted copies
 | `quiz` | Keyed by the question's number from 1. `answers`, `firstWrong` (at most `answers`), `misses` (0 to 9), `wrong` (option indexes picked, up to 9). |
 | `lookups` | `glossary` terms opened and `"?"` hint labels opened, with counts. Terms must be in the page's glossary and labels must be text in the page, or they are dropped. |
 
-At most 64 KB, 50 explainers, 500 sections and 50 quiz items each. Unknown fields are refused (no URLs, user agents or ids get in). Prototype keys are dropped. An unknown explainer, route or stale fingerprint is dropped and counted, not an error.
+At most 64 KB, 50 explainers, 500 sections and 50 quiz items each. Unknown fields are refused (no URLs, user agents or ids get in). Prototype keys are dropped. An unknown explainer, route or stale fingerprint is dropped and counted, not an error. A note that fails the shared text rules (`scripts/lib/untrusted-text.mjs`: over 140 characters, more than one line, hidden characters, text addressed to an agent, a command line, a non-http(s) link, markup, a code fence or backticks around anything but a path) is dropped and counted in `dropped.notes`; its vote still counts. The same rules filter imported insights, and run again on every note `insights --json`, the hub summary and `notes --json` hand out, so a file edited behind our back still gives nothing that fails them.
 
 ### Sending
 
-- **Under serve:** `POST /api/signals` with `X-Concept-Explainer-Token` (per-run or device token), `Content-Type: application/json`, the batch as the body. Send on page hide (`fetch` with `keepalive`) and from Settings "Send now". `200 { ok, duplicate, merged: [slug], dropped: { explainers, sections, quiz, lookups } }`: clear the pending deltas only now. A repeated `batchId` answers `duplicate: true` and changes nothing (the last 500 are kept). `400 { error: "signals: ..." }` bad batch, `403` token, origin or "learning is off", `413` over 64 KB, `415` not JSON, `503 { error: "library is busy" }` when another writer holds the library for more than 2 seconds: keep the deltas and send again later.
+- **Under serve:** `POST /api/signals` with `X-Concept-Explainer-Token` (per-run or device token), `Content-Type: application/json`, the batch as the body. Send on page hide (`fetch` with `keepalive`) and from Settings "Send now". `200 { ok, duplicate, merged: [slug], dropped: { explainers, sections, quiz, lookups, notes } }`: clear the pending deltas only now. A repeated `batchId` answers `duplicate: true` and changes nothing (the last 500 are kept). `400 { error: "signals: ..." }` bad batch, `403` token, origin or "learning is off", `413` over 64 KB, `415` not JSON, `503 { error: "library is busy" }` when another writer holds the library for more than 2 seconds: keep the deltas and send again later.
 - **From file://:** Settings > Reading > "Send feedback to the library" shows exactly what goes, offers "Download feedback file" (`<key>.signals.json`, the same batch), and the command to copy: `concept-explainer insights import <file>`. Same checks and dedupe.
 
 ## Library memory
@@ -103,7 +103,7 @@ A batch for a section whose fingerprint changed starts that section fresh.
 
 ## Agent notes
 
-What one run leaves for the next about one subject, in `<home>/notes/<subject>.json` and `<subject>.md` (0600; the file name is the subject slugified).
+What one run leaves for the next about one subject, in `<home>/notes/<subject>.json` and `<subject>.md` (0600; the file name is the subject slugified). The subject is one token: a repo `owner/name`, a source ref or a tag (letters, digits and `. / @ + - _`, up to 120). `readerFlags` items have exactly `flagId` and `response`; any other field is refused, and saved items are rebuilt from those two fields.
 
 ```json
 {

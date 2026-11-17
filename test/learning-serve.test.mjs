@@ -69,7 +69,7 @@ test('POST /api/signals merges a batch with the token, and acknowledges a repeat
   const body = batch(more);
   const res = await post(body);
   assert.equal(res.status, 200, res.body);
-  assert.deepEqual(JSON.parse(res.body), { ok: true, duplicate: false, merged: ['acme-taskflow'], dropped: { explainers: 0, sections: 0, quiz: 0, lookups: 0 } });
+  assert.deepEqual(JSON.parse(res.body), { ok: true, duplicate: false, merged: ['acme-taskflow'], dropped: { explainers: 0, sections: 0, quiz: 0, lookups: 0, notes: 0 } });
   assert.equal(JSON.parse((await post(body)).body).duplicate, true);
   assert.equal(readInsights(home, 'acme-taskflow').sections['concepts/1'].votes.more, 1);
 });
