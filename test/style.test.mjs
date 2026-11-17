@@ -53,7 +53,8 @@ test('publish puts the style in the page context and the hub data', () => {
 
   publishExplainer(example, { home, style: 'clean' });
   const context = embedded(readFileSync(pagePath, 'utf8'), 'explainer-context');
-  assert.deepEqual({ ...context, config: undefined, chapters: undefined, enums: undefined }, { chapters: undefined, enums: undefined, libraryHref: '../../index.html', slug: 'acme-taskflow', style: 'clean', config: undefined }, 'a flag wins for that page');
+  const { config: _c, sections: _s, build: _b, key: _k, chapters: _ch, enums: _e, ...rest } = context;
+  assert.deepEqual(rest, { libraryHref: '../../index.html', slug: 'acme-taskflow', style: 'clean' }, 'a flag wins for that page');
   assert.equal(embedded(readFileSync(libraryPaths(home).hub, 'utf8'), 'explainer-data').style, 'playful', 'the hub follows the library default');
 });
 

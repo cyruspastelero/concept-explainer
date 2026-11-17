@@ -86,9 +86,10 @@ function contextJson(html) {
 
 test('standalone builds get an empty context, library builds get theirs', () => {
   const templateDir = templateWithContextTag();
-  // The build always adds the shown chapters and the settings enums (see build-context.test.mjs).
+  // The build always adds the shown chapters, the settings enums (see build-context.test.mjs)
+  // and the learning loop fields; nothing else is added.
   const own = (html) => {
-    const { chapters, enums, ...rest } = contextJson(html);
+    const { chapters, enums, sections, build, key, ...rest } = contextJson(html);
     assert.ok(Array.isArray(chapters) && enums && typeof enums === 'object');
     return rest;
   };
@@ -96,6 +97,7 @@ test('standalone builds get an empty context, library builds get theirs', () => 
   const context = { libraryHref: '../../index.html', slug: 'acme-taskflow' };
   const html = buildExplainer(example, { templateDir, context });
   assert.deepEqual(own(html), context);
+  assert.match(contextJson(html).build, /^[0-9a-f]{64}$/);
   assert.doesNotMatch(html, /id="explainer-context">__CONTEXT__</, 'the tag itself is filled');
 });
 

@@ -102,7 +102,8 @@ test('a different repo with the same name gets a suffixed slug', () => {
 test('pages built into the library carry the library context', () => {
   const home = tempHome();
   const { pagePath } = publishExplainer(example, { home });
-  const { config, chapters, enums, ...context } = embedded(readFileSync(pagePath, 'utf8'), 'explainer-context');
+  const { config, chapters, enums, sections, build, key, ...context } = embedded(readFileSync(pagePath, 'utf8'), 'explainer-context');
+  assert.equal(key, 'acme-taskflow');
   assert.deepEqual(context, { libraryHref: '../../index.html', slug: 'acme-taskflow', style: 'clean' });
   assert.ok(chapters.includes('map') && enums.styles.includes('clean'), 'the build adds chapters and enums');
   assert.equal(config.audience, 'engineer');
