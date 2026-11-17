@@ -13,7 +13,7 @@ test('defaults cover every documented key', () => {
   assert.deepEqual(CONFIG_DEFAULTS, {
     style: 'clean', defaultType: 'auto', audience: 'engineer', depth: 'standard', language: 'en', visuals: [],
     chapters: {}, quiz: true, analogies: true, codeWalkthrough: 'auto', model: 'auto', budgetUsd: null, confirmBeforeStart: true, instructions: '',
-    servePort: null, serveIdleMinutes: null, deviceTokenDays: 30,
+    servePort: null, serveIdleMinutes: null, deviceTokenDays: 30, learning: true,
   });
 });
 
