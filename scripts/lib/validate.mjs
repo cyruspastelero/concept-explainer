@@ -210,7 +210,8 @@ function checkPlaceholders(report, data) {
 /**
  * Validate an explainer data object.
  * @param {unknown} data
- * @param {{ repoRoot?: string }} [options] when repoRoot is given, every cited file must exist there
+ * @param {{ repoRoot?: string, flags?: object[] }} [options] when repoRoot is given, every cited file must exist there;
+ *   `flags` are this explainer's reader flags from the library (learning loop)
  *   (only for types that cite code: repo, pr, change, migration)
  * @returns {ValidationResult}
  */
@@ -226,7 +227,7 @@ export function validateExplainer(data, options = {}) {
   checkFlows(report, arr(data.flows), nodeIds, type);
   checkChanges(report, arr(data.changes), nodeIds);
   checkLessons(report, data);
-  checkV2(report, data, nodeIds);
+  checkV2(report, data, nodeIds, options);
   checkWalkthroughs(report, data, nodeIds, type);
   checkLessonShape(report, data);
   checkNoMarkup(report, data);

@@ -253,7 +253,7 @@ function publishUnlocked(data, options) {
   const paths = libraryPaths(home);
   const style = styleFor(home, options.style);
   const { manifest, recovered } = readManifest(home);
-  const source = { ...sourceIdentity(data), repoPath: options.repoPath, sourcePath: options.sourcePath };
+  const source = sourceOf(data, options);
   // An explicit slug (from import) is used as is; otherwise pick one by source.
   const { slug, existing } = options.slug
     ? { slug: checkedSlug(options.slug), existing: manifest.explainers.some((e) => e.slug === options.slug) }
@@ -279,6 +279,20 @@ function publishUnlocked(data, options) {
   writeAtomic(paths.manifest, toJson(next));
   const hubPath = options.skipHub ? paths.hub : writeHub(home, next, options);
   return { slug, updated: existing, pagePath, hubPath, recovered, style };
+}
+
+// The source identity (shared with import and entries) plus where it was built from.
+function sourceOf(data, options) {
+  return { ...sourceIdentity(data), repoPath: options.repoPath, sourcePath: options.sourcePath };
+}
+
+/** The slug this data already has in the library (same source), or null. Reads only. */
+export function existingSlugFor(data, options = {}) {
+  if (!data || typeof data !== 'object' || !data.meta || typeof data.meta !== 'object') return null;
+  const home = options.home || resolveHome();
+  if (!existsSync(libraryPaths(home).manifest)) return null;
+  const { slug, existing } = chooseSlug(readManifest(home).manifest.explainers, baseSlugFor(data, options), sourceOf(data, options));
+  return existing ? slug : null;
 }
 
 function checkedSlug(slug) {

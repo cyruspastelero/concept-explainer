@@ -5,6 +5,7 @@ import {
   NODE_STATUSES, SOURCE_KINDS, STATUSES, TYPE_RULES, UNDECIDED_STATUSES,
 } from './schema.mjs';
 import { checkDiagrams, checkVisual } from './validate-visuals.mjs';
+import { sectionsFor } from './sections.mjs';
 import {
   arr, checkCount, checkOneOf, isObject, isText, listAt, optionalText, requireText, sentences, words,
 } from './validate-util.mjs';
@@ -224,7 +225,61 @@ function checkExplaining(report, data) {
   });
 }
 
-export function checkV2(report, data, nodeIds) {
+const BECAUSE = ['readers', 'source', 'notes'];
+const FLAG_ID = /^f-[0-9a-f]{12}$/;
+const SINCE_MAX = 8;
+
+// changesSinceLast: what this run changed and why, shown as "Changed since
+// last time". `because: readers` must name the reader flags it answers.
+function checkChangesSince(report, data, flags) {
+  const since = data.changesSinceLast;
+  if (since === undefined) return;
+  if (!isObject(since)) { report.error('changesSinceLast', 'must be { previousBuild?, items[], kept[]? }'); return; }
+  if (since.previousBuild !== undefined && !(typeof since.previousBuild === 'string' && /^[0-9a-f]{64}$/.test(since.previousBuild))) {
+    report.error('changesSinceLast.previousBuild', 'must be the 64 hex build hash of the previous run');
+  }
+  const known = flags ? new Set(flags.map((f) => f.id)) : null;
+  const flagOk = (id, path) => {
+    if (typeof id !== 'string' || !FLAG_ID.test(id)) report.error(path, 'must be a flag id like f-0123456789ab');
+    else if (known && !known.has(id)) report.error(path, `"${id}" is not a flag on this explainer (concept-explainer insights <slug>)`);
+  };
+  const sections = sectionsFor(data);
+  const items = listAt(report, 'changesSinceLast.items', since.items);
+  if (items.length > SINCE_MAX) report.error('changesSinceLast.items', `${items.length} items; keep to ${SINCE_MAX}`);
+  items.forEach((item, i) => {
+    const path = `changesSinceLast.items[${i}]`;
+    if (!isObject(item)) { report.error(path, 'must be an object'); return; }
+    requireText(report, `${path}.what`, item.what);
+    if (item.route !== undefined && !Object.prototype.hasOwnProperty.call(sections, item.route)) report.error(`${path}.route`, `"${item.route}" is not a section of this explainer`);
+    checkOneOf(report, `${path}.because`, item.because, BECAUSE, { required: true });
+    const addresses = listAt(report, `${path}.addresses`, item.addresses);
+    if (item.because === 'readers' && !addresses.length) report.error(`${path}.addresses`, 'because: readers must name the reader flags it addresses');
+    addresses.forEach((id, j) => flagOk(id, `${path}.addresses[${j}]`));
+  });
+  listAt(report, 'changesSinceLast.kept', since.kept).forEach((k, i) => {
+    const path = `changesSinceLast.kept[${i}]`;
+    if (!isObject(k)) { report.error(path, 'must be { flagId, reason }'); return; }
+    flagOk(k.flagId, `${path}.flagId`);
+    requireText(report, `${path}.reason`, k.reason);
+  });
+}
+
+// Each open reader flag must be answered: addressed by an item or kept with a reason.
+function checkOpenFlags(report, data, flags) {
+  if (!flags) return;
+  const since = isObject(data.changesSinceLast) ? data.changesSinceLast : {};
+  const handled = new Set([
+    ...arr(since.items).flatMap((i) => (isObject(i) ? arr(i.addresses) : [])),
+    ...arr(since.kept).map((k) => (isObject(k) ? k.flagId : null)),
+  ]);
+  flags.filter((f) => f.state === 'open' && !handled.has(f.id)).forEach((f) => {
+    report.warn('changesSinceLast', `reader flag ${f.id} (${f.kind} on ${f.route}, n = ${f.evidence && f.evidence.n}) is open. Address it in an item, or list it in kept with a reason`);
+  });
+}
+
+export function checkV2(report, data, nodeIds, options = {}) {
+  checkChangesSince(report, data, options.flags);
+  checkOpenFlags(report, data, options.flags);
   checkExplaining(report, data);
   checkMetaV2(report, data);
   checkTypeRequirements(report, data);

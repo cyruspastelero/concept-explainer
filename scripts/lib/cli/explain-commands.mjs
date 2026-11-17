@@ -20,7 +20,7 @@ import { readSnippet } from '../snippet.mjs';
 import {
   out, err, BIN, UsageError, asUsage, printJson, readJson, report, requirePositional, toJson, writeFile,
 } from './io.mjs';
-import { chosenStyle, publish, validated } from './library-commands.mjs';
+import { chosenStyle, flagsFor, publish, validated } from './library-commands.mjs';
 
 // Sized by their source document. A migration is sized by its repo and its doc.
 const DOC_ONLY = ['proposal', 'incident', 'concept'];
@@ -125,7 +125,8 @@ export const EXPLAIN_COMMANDS = {
 
   validate(positionals, opts) {
     const file = requirePositional(positionals, '<file>');
-    const ok = report(validateExplainer(readJson(file), { repoRoot: opts.repo && resolve(opts.repo) }), opts.strict);
+    const data = readJson(file);
+    const ok = report(validateExplainer(data, { repoRoot: opts.repo && resolve(opts.repo), flags: flagsFor(data, file, opts) }), opts.strict);
     if (!ok) process.exitCode = 1;
   },
 

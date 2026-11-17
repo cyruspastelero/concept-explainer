@@ -111,7 +111,8 @@ export const MARKUP = /<\/?[a-z][a-z0-9-]*(\s[^>]*)?>/i;
 
 // Prose fields are read by people; code-ish fields are exempt from style checks.
 export const NON_PROSE_KEYS = new Set(['code', 'file', 'files', 'path', 'command', 'url', 'ref', 'id', 'type', 'name', 'lang', 'from', 'to', 'layer', 'kind', 'color', 'date', 'generatedAt', 'commit', 'repo', 'author', 'authorType', 'chapters', 'preset', 'stack', '$schema',
-  'status', 'impact', 'variant', 'pair', 'at', 'lines', 'in', 'parent', 'schemaVersion', 'refs', 'illustrative']);
+  'status', 'impact', 'variant', 'pair', 'at', 'lines', 'in', 'parent', 'schemaVersion', 'refs', 'illustrative',
+  'previousBuild', 'because', 'addresses', 'flagId', 'route']);
 
 // Em dash, en dash, or a spaced hyphen used as punctuation.
 export const DASH = /\s[\u2014\u2013-]\s|\u2014|\u2013/;

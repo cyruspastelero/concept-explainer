@@ -1,7 +1,7 @@
 // library, install and config commands, plus publishing used by build.
 import { resolve } from 'node:path';
 import {
-  ensureHub, libraryPaths, listExplainers, publishExplainer, readConfig, rebuildLibrary, removeExplainer, resolveHome, styleFor, writeConfig,
+  ensureHub, existingSlugFor, libraryPaths, listExplainers, publishExplainer, readConfig, rebuildLibrary, removeExplainer, resolveHome, styleFor, writeConfig,
 } from '../library.mjs';
 import { installSkill, resolveConfigDir } from '../install.mjs';
 import { CONFIG_DEFAULTS, setConfigValue } from '../config.mjs';
@@ -10,6 +10,7 @@ import { startOrReuse } from '../serve-state.mjs';
 import { createPairCode, forgetDevices } from '../pairing.mjs';
 import { launch } from '../launch.mjs';
 import { NEW_PORT_NOTE, ensureServePort, newServePort } from '../serve-port.mjs';
+import { allFlags, markFlags } from '../insights.mjs';
 import { installLauncher, uninstallLauncherAsync } from '../launcher.mjs';
 import { readFileSync as readPackage } from 'node:fs';
 import { applyImport, createBundle, planImport, readBundleFile } from '../bundle.mjs';
@@ -26,9 +27,16 @@ export function chosenStyle(opts) {
   return asUsage(() => styleFor(home(), opts.style));
 }
 
+// This explainer's reader flags, when learning is on and it is in the library.
+export function flagsFor(data, file, opts) {
+  if (readConfig(home()).learning === false) return undefined;
+  const slug = existingSlugFor(data, { home: home(), sourcePath: resolve(file), repoPath: opts.repo && resolve(opts.repo) });
+  return slug ? allFlags(home(), slug) : undefined;
+}
+
 export function validated(file, opts) {
   const data = readJson(file);
-  if (!report(validateExplainer(data, { repoRoot: opts.repo && resolve(opts.repo) }), opts.strict)) {
+  if (!report(validateExplainer(data, { repoRoot: opts.repo && resolve(opts.repo), flags: flagsFor(data, file, opts) }), opts.strict)) {
     process.exitCode = 1;
     return null;
   }
@@ -37,6 +45,8 @@ export function validated(file, opts) {
 
 export function publish(data, file, opts, style) {
   const result = publishExplainer(data, { home: home(), sourcePath: resolve(file), repoPath: opts.repo && resolve(opts.repo), style });
+  // Reader flags this build answered are marked addressed (or kept).
+  if (readConfig(home()).learning !== false) markFlags(home(), result.slug, data);
   if (result.recovered) err('  ⚠ library.json was corrupt; it was backed up and rebuilt\n');
   err(`✔ ${result.updated ? 'updated' : 'added'} ${result.slug} in the library\n  page: ${result.pagePath}\n  library: ${result.hubPath}\n`);
   return result;
