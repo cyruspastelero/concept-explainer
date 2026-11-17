@@ -28,8 +28,9 @@ Library (home: $CONCEPT_EXPLAINER_HOME, else ~/.concept-explainer)
   library rebuild                  Re-render every page, the hub and the kit with the current template
   library open                     Open the hub in your browser
   library style [clean|playful]    Print or set the default style
-  library serve [--port n] [--idle m] [--forget-devices]
-                                   Serve the library on 127.0.0.1 (default port 4747) so pages can save and install as an app
+  library serve [--port n | --new-port] [--idle m] [--forget-devices]
+                                   Serve the library on 127.0.0.1, on its own random port (picked once, kept in config.json),
+                                   so pages can save and install as an app. --new-port picks and keeps a new one
   launch                           Start the server if needed, pair this browser and open the hub (what the app icon runs)
   export [slug...] [--out f]       Share as a data-only bundle (--type, --tag, --stack, --search; none = all)
   import <file> [--dry-run]        Add a bundle (--on-conflict rename|skip|replace, default rename)

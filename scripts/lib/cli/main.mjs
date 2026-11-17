@@ -29,6 +29,7 @@ const OPTIONS = {
   'launcher-dir': { type: 'string' },
   home: { type: 'string' },
   'forget-devices': { type: 'boolean' },
+  'new-port': { type: 'boolean' },
   launcher: { type: 'boolean' },
   tag: { type: 'string' },
   stack: { type: 'string' },

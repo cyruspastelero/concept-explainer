@@ -7,7 +7,7 @@ All notable changes to this project are documented here. This project follows [S
 ### Added
 
 - **App launcher.** `install --launcher` adds a macOS app, a Linux menu entry or a Windows Start Menu shortcut that runs `launch`; `uninstall --launcher` removes exactly what it wrote. `launch` starts or reuses the library server, pairs the browser with a one-time code and opens the hub. See `references/launcher.md`.
-- **`library serve` as an installable app** on a fixed origin (`127.0.0.1:4747`, config `servePort`): web app manifest, service worker and icons from a fixed map, `localhost` redirected, `/api/health`, `/api/pages`, `/api/pair`, `--idle` and `--forget-devices`, and a global `--home`.
+- **`library serve` as an installable app** on its own origin (`127.0.0.1` on a random per-user port picked once and kept as `servePort`; `library serve --new-port` picks a new one): web app manifest, service worker and icons from a fixed map, `localhost` redirected, `/api/health`, `/api/pages`, `/api/pair`, `--idle` and `--forget-devices`, and a global `--home`.
 - **Pairing and device tokens** stored only as hashes in `<home>/.serve`. A server is reused only when it proves it is ours (HMAC of a nonce with the secret in `server.json`), so a program squatting the port never receives a pairing code.
 
 ## 0.2.0 (2026-11-18)

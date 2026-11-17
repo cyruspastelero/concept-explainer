@@ -31,4 +31,4 @@ These are in scope:
 - The library hub only links into its own `explainers/` folder; any other href renders as text.
 - `install` never deletes: a real folder or an edited rule is refused, or with `--force` moved aside as a backup.
 
-**Known open risk (launcher):** a local program that holds `127.0.0.1:4747` while our idle-stopped server is down can register a service worker that later reads a pairing code from the launcher's navigation. A `Clear-Site-Data` reset from the redirect file does not remove it in Chrome (partitioned third-party context), so this is not fixed yet; see the Known limits section of `references/launcher.md`.
+- The launcher's origin is `127.0.0.1` on a random per-user port (20000 to 60999) kept in the `0700` home, so another local program cannot predict it, take it while the server is stopped and plant a service worker there. `launch` refuses a port held by anything that cannot prove it is this library's server; it never quietly moves the installed app. Malware running as the same user is out of scope: it can read the home anyway.

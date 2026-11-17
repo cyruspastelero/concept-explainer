@@ -75,3 +75,28 @@ export function openLaunchFile(path, { platform = process.platform, exec = execF
   const { command, args, ignoreExitCode } = openCommand(platform, path);
   return run(command, args, ignoreExitCode, exec, path);
 }
+
+/**
+ * Tell the person something when there is no terminal to print to (the app
+ * icon runs `launch` from the desktop). The message travels as an argument or
+ * in an environment variable, never inside a script, and a missing tool is
+ * not an error: the message is also on stderr.
+ * @returns {boolean} true when a dialog or notification was shown
+ */
+export function notifyUser(message, { platform = process.platform, exec = execFileSync, env = process.env } = {}) {
+  const text = String(message).slice(0, 1000);
+  const attempts = {
+    darwin: [['/usr/bin/osascript', ['-e', 'on run argv', '-e', 'display alert "Concept Explainer" message (item 1 of argv)', '-e', 'end run', text]]],
+    win32: [['powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+      'Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show($env:CE_MESSAGE, "Concept Explainer") | Out-Null']]],
+  }[platform] || [['notify-send', ['Concept Explainer', text]], ['zenity', ['--error', '--title=Concept Explainer', `--text=${text}`]]];
+  for (const [command, args] of attempts) {
+    try {
+      exec(command, args, { stdio: 'ignore', windowsHide: true, env: { ...env, CE_MESSAGE: text } });
+      return true;
+    } catch {
+      // try the next tool
+    }
+  }
+  return false;
+}

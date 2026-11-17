@@ -8,27 +8,27 @@ Code: `scripts/lib/serve.mjs`, `serve-state.mjs` (server.json, health, ports), `
 
 | Command | What it does |
 |---|---|
-| `library serve [--port n] [--idle m] [--forget-devices]` | Serve on `127.0.0.1`, port `servePort` (default 4747; `--port 0` picks one). `--idle` stops it after that many quiet minutes (default `serveIdleMinutes`, else never). `--forget-devices` revokes every paired device first. |
+| `library serve [--port n \| --new-port] [--idle m] [--forget-devices]` | Serve on `127.0.0.1`, on the library's own port (`servePort`, picked at random on first use; `--port n` for an explicit one, `--port 0` picks one for this run). If something that cannot prove it is ours holds the library's port, a plain run serves on a random port for this run only and says so; an explicit `--port` is refused instead. `--new-port` picks and keeps a new random port (reinstall the installed app afterwards). `--idle` stops it after that many quiet minutes (default `serveIdleMinutes`, else never). `--forget-devices` revokes every paired device first. |
 | `launch` | Reuse our running server, or start one detached that stops after 30 idle minutes, then open a private redirect file that sends the browser to `index.html#pair=<code>`. The code is never on a command line, printed or returned. |
 | `install --launcher [--node p] [--launcher-dir d] [--force]` | Write the app icon for this platform. `--node` picks a stable node; `--launcher-dir` writes somewhere other than the default (tests use it). |
 | `uninstall --launcher` | Remove what install wrote, if unchanged, and stop a server the launcher started. |
 | `--home <dir>` | Any command: use that library for this run. The launcher bakes it in. |
 
-Config: `servePort` (1024 to 65535, default 4747), `serveIdleMinutes` (0 to 1440, or `null`: the launcher uses 30 and a manual `serve` never stops) and `deviceTokenDays` (1 to 365, default 30: a device token unused that long stops working).
+Config: `servePort` (1024 to 65535, or `null`: picked at random from 20000 to 60999 the first time `install --launcher`, `launch` or `library serve` needs it, then kept), `serveIdleMinutes` (0 to 1440, or `null`: the launcher uses 30 and a manual `serve` never stops) and `deviceTokenDays` (1 to 365, default 30: a device token unused that long stops working).
 
 ## One origin
 
-An installed web app is tied to scheme, host and port, so the address never changes: `http://127.0.0.1:4747`.
+An installed web app is tied to scheme, host and port, so the address never changes: `http://127.0.0.1:<servePort>`. The port is random per user (20000 to 60999), picked once and kept in `<home>/config.json`. The home is `0700`, so other local accounts cannot read it, and a program that would take the port while our server is stopped has to guess it first (see Known limits).
 
 - A request with Host `localhost:<port>` gets a **308** to the same path on `127.0.0.1`. Any other Host is refused. Writes accept only Origin `http://127.0.0.1:<port>`.
-- **Port busy.** The server on the port is reused only when it **proves** it is this library's server (below). Anything else, even a program answering with our exact fingerprint, gets nothing: the library moves to the first free port in 4748 to 4757 and says clearly that the installed app will not open until 4747 is free.
+- **Port busy.** The server on the port is reused only when it **proves** it is this library's server (below). Anything else, even a program answering with our exact fingerprint, gets nothing. `launch` (the installed app) then stops and says so, in a dialog when there is no terminal: close that program, or run `concept-explainer library serve --new-port` and reinstall the installed app from the browser, since it is tied to the old address. It never moves the app to another port quietly. A plain `library serve` serves on a random port for that run only, with the same advice.
 
 ### Proving a server is ours
 
 `library serve` writes `<home>/.serve/server.json` (0600, in a 0700 folder) while it runs:
 
 ```json
-{ "pid": 4321, "port": 4747, "instance": "9f…", "secret": "64 hex", "version": "0.3.0", "startedAt": "…", "idleMinutes": 30, "launched": true }
+{ "pid": 4321, "port": 41873, "instance": "9f…", "secret": "64 hex", "version": "0.3.0", "startedAt": "…", "idleMinutes": 30, "launched": true }
 ```
 
 To reuse it, `launch` and `serve` check that the pid lives, then send a fresh 16 byte nonce: `GET /api/health?nonce=<32 hex>`. The server answers with `proof = HMAC-SHA256(secret, nonce)`; the caller compares it with `timingSafeEqual` and checks the instance. Only a process that can read `server.json` can pass. The file is removed when the server stops.
@@ -97,6 +97,6 @@ Every written path and its sha256 go to `<home>/.serve/launcher.json` (0600). In
 
 While the server runs, other accounts on the same machine can read pages on `127.0.0.1` (not data files, and they cannot write: writes need a token). Run `library serve` only on machines you trust with that.
 
-**A program that squats the port while our server is stopped can keep a service worker on the origin.** The origin is fixed (`127.0.0.1:4747`) so the installed app keeps its storage, and the launcher's server stops when idle, which frees the port. Another local program can take the port then, register a service worker on `http://127.0.0.1:4747`, and leave. That worker answers every later navigation to the origin, including the launcher's `#pair=<code>`, before our server sees the request. It can read the code, pair as the user on our real server and get a device token. `launch` refuses to reuse a server that cannot prove itself, so a squatter that still holds the port gets nothing; the risk is a worker left behind.
+**Why the port is random.** A service worker belongs to its origin. If the port were well known, another local program could take it while our server is stopped (it stops when idle), register a worker on our origin and leave. That worker would answer every later navigation there, including the launcher's `#pair=<code>`, before our server saw a request. We checked in Chrome (2026-11-18) that the server cannot remove such a worker afterwards. A `Clear-Site-Data` answer to a request from the launcher's `file://` page clears only a partitioned copy. The browser's update check for the worker script can be served from the squatter's long cache. So the defence is that the squatter never learns the origin. The port is random per user, kept in the `0700` home, and `launch` refuses rather than moving the installed app to a guessable port. A program would have to find the port by scanning 41,000 ports while the server runs, then win the race to take it once the server stops.
 
-We checked the obvious fix in Chrome (2026-11-18) and it does not work. The redirect file sent `POST /api/reset` with `mode: 'no-cors'` and the real server answered `Clear-Site-Data: "storage"`. The request reached the server (`Origin: null`), but the hostile worker stayed and read the code: a request from a `file://` page is a third-party, partitioned context, so the header clears only the partitioned copy. The browser's own update check for the worker script does not help either: the squatter served it with a one-year cache and `updateViaCache: 'all'`, and Chrome took it from cache, so the update never reached our server. Device tokens expire (`deviceTokenDays`) and `--forget-devices` revokes them all. That bounds what a stolen token is worth but does not stop the theft. Until this is fixed, treat other local accounts and programs as able to pair if they win that race.
+**Out of scope: malware running as you.** A program running under your own account can read your home, `config.json` and `server.json` (with its secret), so no local web app can defend against it. Device tokens expire after `deviceTokenDays` unused and `--forget-devices` revokes them all; the pairing code never appears on a command line (`ps`) or in a log.

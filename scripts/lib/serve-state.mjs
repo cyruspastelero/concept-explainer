@@ -1,16 +1,15 @@
 // Who is serving the library: <home>/.serve/server.json, the health check
 // that proves it, and picking a port. The installed app is tied to one
-// origin, so the default port is fixed (4747); a busy port held by us is
-// reused, one held by anything else is never taken over.
+// origin: a random port picked once per user (serve-port.mjs). A busy port
+// held by us is reused; one held by anything else is never taken over.
 import { request } from 'node:http';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { writeAtomic } from './library.mjs';
 import { ensureServeDir, serveDir } from './pairing.mjs';
+import { FELL_BACK, PORT_TAKEN, pickPort } from './serve-port.mjs';
 
-export const DEFAULT_PORT = 4747;
-export const FALLBACK_PORTS = Object.freeze(Array.from({ length: 10 }, (_, i) => 4748 + i));
 export const PAIR_HEADER = 'x-concept-explainer-pair';
 export const APP_NAME = 'concept-explainer';
 
@@ -90,15 +89,14 @@ export async function verifyServer(home, port) {
   return given.length === expected.length && timingSafeEqual(given, expected) ? state : null;
 }
 
-export const TAKEN_WARNING = (port, target) => `Port ${port} is held by a program that is not this library's server, so the library is on ${target} instead. `
-  + `The installed app only works on ${port}: it will not open until that port is free. Nothing was sent to the program on ${port}.`;
-
 /**
- * Serve on `port`, reuse our own server already there, or move to the first
- * free fallback port when something else holds it.
- * @returns {Promise<{ reused: boolean, fellBack: boolean, port: number, instance: string, close: () => Promise<void> }>}
+ * Serve on `port`, or reuse our own server already there. When something
+ * else holds it: with `fallback` (a plain browser run), serve on a random
+ * port for this run only; without it, refuse with advice.
+ * @param {{ home: string, port: number, fallback?: boolean } & object} options
+ * @returns {Promise<{ reused: boolean, fellBack: boolean, port: number, instance: string, warning?: string, close: () => Promise<void> }>}
  */
-export async function startOrReuse({ port = DEFAULT_PORT, fallbackPorts = FALLBACK_PORTS, ...options }) {
+export async function startOrReuse({ port, fallback = false, ...options }) {
   const { startLibraryServer } = await import('./serve.mjs');
   const tryPort = async (p) => {
     try {
@@ -112,9 +110,8 @@ export async function startOrReuse({ port = DEFAULT_PORT, fallbackPorts = FALLBA
   if (first) return { ...first, reused: false, fellBack: false };
   const ours = await verifyServer(options.home, port);
   if (ours) return { reused: true, fellBack: false, port, instance: ours.instance, close: async () => {} };
-  for (const p of fallbackPorts) {
-    const next = await tryPort(p);
-    if (next) return { ...next, reused: false, fellBack: true, warning: TAKEN_WARNING(port, next.port) };
-  }
-  throw new Error(`serve: port ${port} is used by another program and ${fallbackPorts.join(', ')} are busy. Pass --port`);
+  if (!fallback) throw new Error(`serve: ${PORT_TAKEN(port)}`);
+  const next = await tryPort(await pickPort({ avoid: [port] }));
+  if (!next) throw new Error(`serve: ${PORT_TAKEN(port)}`);
+  return { ...next, reused: false, fellBack: true, warning: FELL_BACK(port, next.port) };
 }

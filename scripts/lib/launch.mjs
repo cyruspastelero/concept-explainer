@@ -5,14 +5,14 @@
 import { spawn } from 'node:child_process';
 import { chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { createServer } from 'node:net';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ensureHub, readConfig, resolveHome } from './library.mjs';
 import { createPairCode, ensureServeDir, openFileFor, serveDir, sweepOpenFiles } from './pairing.mjs';
 
 export { sweepOpenFiles };
-import { FALLBACK_PORTS, TAKEN_WARNING, readServerState, verifyServer } from './serve-state.mjs';
+import { readServerState, verifyServer } from './serve-state.mjs';
+import { PORT_TAKEN, ensureServePort, portFree } from './serve-port.mjs';
 import { openLaunchFile } from './open.mjs';
 
 export const BIN_PATH = resolve(fileURLToPath(new URL('../../bin/concept-explainer.mjs', import.meta.url)));
@@ -33,14 +33,6 @@ function processAlive(pid) {
 async function runningServer(home) {
   const state = readServerState(home);
   return state ? verifyServer(home, state.port) : null;
-}
-
-function portFree(port) {
-  return new Promise((done) => {
-    const probe = createServer();
-    probe.once('error', () => done(false));
-    probe.listen(port, '127.0.0.1', () => probe.close(() => done(true)));
-  });
 }
 
 // One starter at a time, across processes: an atomic mkdir holding our pid.
@@ -137,14 +129,15 @@ function writeOpenFile(home, port, code) {
 }
 
 /**
- * @param {{ home?: string, port?: number, fallbackPorts?: number[], idleMinutes?: number, opener?: (file: string) => unknown,
+ * @param {{ home?: string, port?: number, idleMinutes?: number, opener?: (file: string) => unknown,
  *   nodePath?: string, binPath?: string, timeoutMs?: number }} [options]
- * @returns {Promise<{ url: string, port: number, started: boolean, warning?: string }>} url is the hub, with no code
+ * @returns {Promise<{ url: string, port: number, started: boolean }>} url is the hub, with no code
  */
 export async function launch(options = {}) {
   const home = options.home || resolveHome();
   const config = readConfig(home);
-  const port = options.port ?? config.servePort;
+  // The library's own random port, picked and stored on first use.
+  const port = options.port ?? (await ensureServePort(home)).port;
   const idleMinutes = options.idleMinutes ?? config.serveIdleMinutes ?? LAUNCHER_IDLE_MINUTES;
   const timeoutMs = options.timeoutMs ?? 5000;
   ensureServeDir(home);
@@ -152,29 +145,21 @@ export async function launch(options = {}) {
   ensureHub({ home });
   let running = await runningServer(home);
   let started = false;
-  let warning;
   if (!running) {
     await withStartLock(home, timeoutMs, async () => {
       running = await runningServer(home);
       if (running) return;
-      let target = port;
-      if (!(await portFree(port))) {
-        // Taken. Only a server proven to be ours is reused (runningServer said no),
-        // so whatever holds the port gets nothing from us.
-        const free = [];
-        for (const p of options.fallbackPorts ?? FALLBACK_PORTS) if (await portFree(p)) { free.push(p); break; }
-        if (!free.length) throw new Error(`launch: port ${port} and every fallback port are busy`);
-        [target] = free;
-        warning = TAKEN_WARNING(port, target);
-      }
-      spawnServer({ home, port: target, idleMinutes, nodePath: options.nodePath || process.execPath, binPath: options.binPath || BIN_PATH });
+      // Taken by something that is not our proven server: the installed app
+      // must not move (its origin is this port), and nothing goes to that program.
+      if (!(await portFree(port))) throw new Error(`launch: ${PORT_TAKEN(port)}`);
+      spawnServer({ home, port, idleMinutes, nodePath: options.nodePath || process.execPath, binPath: options.binPath || BIN_PATH });
       started = true;
-      running = await waitForServer(home, target, timeoutMs);
+      running = await waitForServer(home, port, timeoutMs);
     });
   }
   // The code goes into a private file the browser opens; it is never printed,
   // returned or passed on a command line.
   const file = writeOpenFile(home, running.port, createPairCode(home));
   await (options.opener || openLaunchFile)(file);
-  return { url: `http://127.0.0.1:${running.port}/index.html`, port: running.port, started, ...(warning ? { warning } : {}) };
+  return { url: `http://127.0.0.1:${running.port}/index.html`, port: running.port, started };
 }

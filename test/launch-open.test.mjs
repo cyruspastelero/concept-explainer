@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { request } from 'node:http';
 import { launch, sweepOpenFiles } from '../scripts/lib/launch.mjs';
-import { readServerState, PAIR_HEADER } from '../scripts/lib/serve-state.mjs';
+import { readServerState, verifyServer, PAIR_HEADER } from '../scripts/lib/serve-state.mjs';
 import { createPairCode, isDeviceToken, redeemPairCode, forgetDevices, PAIR_TTL_MS } from '../scripts/lib/pairing.mjs';
 import { publishExplainer, writeConfig } from '../scripts/lib/library.mjs';
 
@@ -21,10 +21,13 @@ function library() {
   publishExplainer(example, { home });
   return home;
 }
-const stop = (home) => {
+// Stop only the server this test's temp home started, and only once it proves
+// it is that home's (a planted server.json may name any pid, even this one).
+async function stop(home) {
   const state = readServerState(home);
-  if (state) try { process.kill(state.pid); } catch { /* gone */ }
-};
+  if (!state || state.pid === process.pid || !(await verifyServer(home, state.port))) return;
+  try { process.kill(state.pid); } catch { /* gone */ }
+}
 const openFiles = (home) => readdirSync(join(home, '.serve')).filter((f) => /^open-.*\.html$/.test(f));
 const codeIn = (html) => html.match(/#pair=([0-9a-f]{16}\.[0-9a-f]{64})/)[1];
 function post(port, path, body, headers) {
@@ -63,7 +66,7 @@ test('launch opens a private redirect file: the opener argument never holds the 
     assert.ok(isDeviceToken(home, JSON.parse(res.body).token));
     assert.deepEqual(openFiles(home), [], 'the server deleted the redirect file once the code was used');
   } finally {
-    stop(home);
+    await stop(home);
   }
 });
 

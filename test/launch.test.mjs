@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { launch } from '../scripts/lib/launch.mjs';
-import { fetchHealth, readServerState } from '../scripts/lib/serve-state.mjs';
+import { fetchHealth, readServerState, verifyServer } from '../scripts/lib/serve-state.mjs';
 import { publishExplainer } from '../scripts/lib/library.mjs';
 
 const example = JSON.parse(readFileSync(new URL('../examples/taskflow.explainer.json', import.meta.url), 'utf8'));
@@ -24,9 +24,12 @@ function library() {
   return home;
 }
 
-function stop(home) {
+// Stop only the server this test's temp home started, and only once it proves
+// it is that home's (a planted server.json may name any pid, even this one).
+async function stop(home) {
   const state = readServerState(home);
-  if (state) try { process.kill(state.pid); } catch { /* gone */ }
+  if (!state || state.pid === process.pid || !(await verifyServer(home, state.port))) return;
+  try { process.kill(state.pid); } catch { /* gone */ }
 }
 
 test('launch starts one detached server, waits for health, pairs and opens the hub', async () => {
@@ -51,7 +54,7 @@ test('launch starts one detached server, waits for health, pairs and opens the h
     assert.ok(existsSync(log));
     assert.equal(statSync(log).mode & 0o777, 0o600);
   } finally {
-    stop(home);
+    await stop(home);
   }
 });
 
@@ -63,7 +66,7 @@ test('two launches at once start one server', async () => {
     assert.equal([a, b].filter((r) => r.started).length, 1);
     assert.equal(a.port, b.port);
   } finally {
-    stop(home);
+    await stop(home);
   }
 });
 
@@ -77,26 +80,24 @@ test('a start lock left by a dead process is cleared', async () => {
     assert.equal(result.started, true);
     assert.ok(!existsSync(join(home, '.serve', 'start.lock')));
   } finally {
-    stop(home);
+    await stop(home);
   }
 });
 
-test('a stale server.json (dead pid) is not trusted, and a foreign server is never taken over', async () => {
+test('a stale server.json (dead pid) is not trusted, and a foreign server on our port is refused, not worked around', async () => {
   const home = library();
   const port = await freePort();
   mkdirSync(join(home, '.serve'), { recursive: true });
   writeFileSync(join(home, '.serve', 'server.json'), JSON.stringify({ pid: 2147483646, port, instance: 'old', version: '0', startedAt: 't' }));
   const foreign = createHttp((req, res) => { res.writeHead(200); res.end('{"app":"not-us"}'); });
   await new Promise((r) => foreign.listen(port, '127.0.0.1', r));
-  const fallback = await freePort();
+  const opened = [];
   try {
-    const result = await launch({ home, port, fallbackPorts: [fallback], opener: () => {} });
-    assert.equal(result.started, true);
-    assert.equal(result.port, fallback);
-    assert.match(result.warning, /installed app/);
+    await assert.rejects(launch({ home, port, opener: (f) => opened.push(f) }), /cannot prove it is this library's server[\s\S]*library serve --new-port[\s\S]*reinstall the installed app/);
+    assert.deepEqual(opened, [], 'nothing was opened');
   } finally {
     foreign.close();
-    stop(home);
+    await stop(home);
   }
 });
 
@@ -113,16 +114,28 @@ test('an impostor answering our fingerprint on the app port gets no pairing code
   // Even a server.json pointing at that port (say, a crashed real server) proves nothing without the secret.
   mkdirSync(join(home, '.serve'), { recursive: true });
   writeFileSync(join(home, '.serve', 'server.json'), JSON.stringify({ pid: process.pid, port, instance: 'fake', secret: 'b'.repeat(64), version: '0', startedAt: 't' }));
-  const fallback = await freePort();
   const opened = [];
   try {
-    const result = await launch({ home, port, fallbackPorts: [fallback], opener: (url) => opened.push(url) });
-    assert.equal(result.port, fallback);
-    assert.match(result.warning, /installed app only works on/);
-    assert.match(readFileSync(opened[0], 'utf8'), new RegExp(`"http://127\\.0\\.0\\.1:${fallback}/index\\.html#pair=`));
+    await assert.rejects(launch({ home, port, opener: (f) => opened.push(f) }), /library serve --new-port/);
+    assert.deepEqual(opened, []);
     assert.ok(seen.every((u) => !/pair/.test(u)), 'nothing secret reached the impostor');
   } finally {
     impostor.close();
-    stop(home);
+    await stop(home);
+  }
+});
+
+test('the first launch picks a random port from 20000 to 60999 and keeps it in config.json', async () => {
+  const { readConfig } = await import('../scripts/lib/library.mjs');
+  const home = library();
+  assert.equal(readConfig(home).servePort, null, 'no port until one is needed');
+  try {
+    const first = await launch({ home, opener: () => {} });
+    assert.ok(first.port >= 20000 && first.port <= 60999, String(first.port));
+    assert.equal(readConfig(home).servePort, first.port);
+    const again = await launch({ home, opener: () => {} });
+    assert.equal(again.port, first.port, 'the same origin every time');
+  } finally {
+    await stop(home);
   }
 });

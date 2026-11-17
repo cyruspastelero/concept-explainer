@@ -9,10 +9,11 @@ import { localDay, today } from '../dates.mjs';
 import { startOrReuse } from '../serve-state.mjs';
 import { createPairCode, forgetDevices } from '../pairing.mjs';
 import { launch } from '../launch.mjs';
+import { NEW_PORT_NOTE, ensureServePort, newServePort } from '../serve-port.mjs';
 import { installLauncher, uninstallLauncherAsync } from '../launcher.mjs';
 import { readFileSync as readPackage } from 'node:fs';
 import { applyImport, createBundle, planImport, readBundleFile } from '../bundle.mjs';
-import { openPath } from '../open.mjs';
+import { notifyUser, openPath } from '../open.mjs';
 import { validateExplainer } from '../validate.mjs';
 import {
   out, err, oneLine, BIN, UsageError, asUsage, printJson, readJson, report, requirePositional, toJson, writeFile,
@@ -41,13 +42,16 @@ export function publish(data, file, opts, style) {
   return result;
 }
 
-function installLauncherCommand(opts) {
+async function installLauncherCommand(opts) {
   const { version } = JSON.parse(readPackage(new URL('../../../package.json', import.meta.url), 'utf8'));
+  // The library's own random port, before anything is tied to it.
+  const { port, created } = await ensureServePort(home());
   const result = asUsage(() => installLauncher({
     home: home(), nodePath: opts.node, targetDir: opts['launcher-dir'], force: Boolean(opts.force), version,
   }));
   result.files.forEach((path) => err(`✔ wrote ${path}\n`));
   result.warnings.forEach((w) => err(`  ⚠ ${w}\n`));
+  err(`  ${created ? 'picked' : 'uses'} port ${port} for the library (kept in config.json; other accounts cannot read it)\n`);
   err('  click it to open your library; it starts the server and stops it after 30 idle minutes\n');
 }
 
@@ -94,7 +98,15 @@ const LIBRARY = {
   },
   async serve(_positionals, opts) {
     const config = readConfig(home());
-    const port = opts.port === undefined ? config.servePort : Number(opts.port);
+    if (opts['new-port'] && opts.port !== undefined) throw new UsageError('use --new-port or --port, not both');
+    if (opts['new-port']) {
+      const { port: fresh } = await newServePort(home());
+      err(`${NEW_PORT_NOTE(fresh)}\n`);
+    }
+    // An explicit --port is used as given; otherwise the library's own random
+    // port (picked and stored on first use), with a one-run fallback if taken.
+    const explicit = opts.port !== undefined;
+    const port = explicit ? Number(opts.port) : (await ensureServePort(home())).port;
     if (!Number.isInteger(port) || port < 0 || port > 65535) throw new UsageError(`--port "${opts.port}" is not a port number (0 picks a free one)`);
     const idleMinutes = opts.idle === undefined ? (config.serveIdleMinutes ?? 0) : Number(opts.idle);
     if (!Number.isInteger(idleMinutes) || idleMinutes < 0 || idleMinutes > 1440) throw new UsageError(`--idle "${opts.idle}" must be whole minutes from 0 to 1440`);
@@ -103,9 +115,11 @@ const LIBRARY = {
       err('✔ forgot every paired device; pages must pair again to save\n');
     }
     ensureHub({ home: home() });
-    const served = await startOrReuse({ home: home(), port, idleMinutes });
+    const served = await startOrReuse({ home: home(), port, idleMinutes, fallback: !explicit });
     if (served.reused) {
-      out(`The library is already being served on 127.0.0.1:${served.port}.\nOpen: http://127.0.0.1:${served.port}/index.html#pair=${createPairCode(home())}\n`);
+      // A pairing link only to a person at a terminal, never into a log file.
+      const link = process.stdout.isTTY ? `http://127.0.0.1:${served.port}/index.html#pair=${createPairCode(home())}` : `http://127.0.0.1:${served.port}/index.html (run \`${BIN} launch\` to pair)`;
+      out(`The library is already being served on 127.0.0.1:${served.port}.\nOpen: ${link}\n`);
       return;
     }
     if (served.warning) err(`  ⚠ ${served.warning}\n`);
@@ -149,8 +163,14 @@ const CONFIG = {
 
 export const LIBRARY_COMMANDS = {
   async launch() {
-    const result = await launch({ home: home() });
-    if (result.warning) err(`  ⚠ ${result.warning}\n`);
+    let result;
+    try {
+      result = await launch({ home: home() });
+    } catch (error) {
+      // From the app icon there is no terminal: show it in a dialog too.
+      if (!process.stdout.isTTY) notifyUser(error.message.replace(/^launch: /, ''));
+      throw error;
+    }
     out(`${result.started ? 'Started' : 'Reused'} the library server and opened http://127.0.0.1:${result.port}/index.html\n`);
   },
 

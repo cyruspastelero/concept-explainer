@@ -220,7 +220,7 @@ No Electron, no install of a browser engine. The library can open like an app:
 concept-explainer install --launcher    # macOS app, Linux menu entry or Windows Start Menu shortcut
 ```
 
-Clicking it starts the library server on `127.0.0.1:4747` (if it is not already running), pairs your browser and opens the hub. In Chrome or Edge you can then install it as an app, and Safari can add it to the Dock; it keeps working offline for reading. The server stops itself after 30 idle minutes, and `uninstall --launcher` removes exactly what install wrote. Every explainer is still one HTML file you can share. How it works: [`references/launcher.md`](references/launcher.md).
+Clicking it starts the library server on `127.0.0.1`, on a port picked at random for you and kept in your library's private `config.json` (if it is not already running), pairs your browser and opens the hub. If another program ever holds that port, the app says so instead of moving; `concept-explainer library serve --new-port` picks a new one (reinstall the browser app afterwards). In Chrome or Edge you can then install it as an app, and Safari can add it to the Dock; it keeps working offline for reading. The server stops itself after 30 idle minutes, and `uninstall --launcher` removes exactly what install wrote. Every explainer is still one HTML file you can share. How it works: [`references/launcher.md`](references/launcher.md).
 
 ### Share
 

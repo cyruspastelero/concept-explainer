@@ -27,7 +27,8 @@ export const CONFIG_DEFAULTS = Object.freeze({
   confirmBeforeStart: true,
   instructions: '',
   // The installed app is tied to this port. null idle means: launcher 30, manual serve never.
-  servePort: 4747,
+  // Picked at random (20000 to 60999) on first use and stored; null until then.
+  servePort: null,
   serveIdleMinutes: null,
   deviceTokenDays: 30,
 });
@@ -76,7 +77,7 @@ function valueErrors(key, value) {
     case 'chapters':
       return chapterErrors(value);
     case 'servePort':
-      return Number.isInteger(value) && value >= 1024 && value <= 65535 ? [] : ['servePort: must be a whole number from 1024 to 65535'];
+      return value === null || (Number.isInteger(value) && value >= 1024 && value <= 65535) ? [] : ['servePort: must be a whole number from 1024 to 65535, or null to pick one'];
     case 'deviceTokenDays':
       return Number.isInteger(value) && value >= 1 && value <= 365 ? [] : ['deviceTokenDays: must be a whole number from 1 to 365'];
     case 'serveIdleMinutes':
@@ -136,7 +137,7 @@ export function parseConfigValue(key, raw) {
     throw new Error(`${key}: use on or off`);
   }
   if (key === 'servePort' || key === 'serveIdleMinutes' || key === 'deviceTokenDays') {
-    if (key === 'serveIdleMinutes' && ['', 'none', 'null'].includes(text)) return null;
+    if ((key === 'serveIdleMinutes' || key === 'servePort') && ['', 'none', 'null'].includes(text)) return null;
     const number = Number(text);
     if (!/^\d+$/.test(text)) throw new Error(`${key}: "${text}" is not a whole number`);
     return number;

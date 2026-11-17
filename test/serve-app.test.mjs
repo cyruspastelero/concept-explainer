@@ -164,10 +164,13 @@ test('a busy port is reused when it is ours, skipped when it is not', async () =
   await new Promise((r) => foreign.listen(0, '127.0.0.1', r));
   const taken = foreign.address().port;
   try {
-    const moved = await startOrReuse({ home, port: taken, fallbackPorts: [0] });
+    await assert.rejects(startOrReuse({ home, port: taken }), /cannot prove it is this library's server/, 'an explicit or installed port is never worked around');
+    const moved = await startOrReuse({ home, port: taken, fallback: true });
     assert.equal(moved.reused, false);
     assert.notEqual(moved.port, taken);
+    assert.ok(moved.port >= 20000 && moved.port <= 60999);
     assert.equal(moved.fellBack, true);
+    assert.match(moved.warning, /this run serves on \d+ instead[\s\S]*--new-port/);
     await moved.close();
   } finally {
     foreign.close();
@@ -196,10 +199,10 @@ test('health proves the server with an HMAC of a nonce; an impostor with our fin
   await new Promise((r) => impostor.listen(0, '127.0.0.1', r));
   const squatted = impostor.address().port;
   try {
-    const moved = await startOrReuse({ home, port: squatted, fallbackPorts: [0] });
+    const moved = await startOrReuse({ home, port: squatted, fallback: true });
     assert.equal(moved.reused, false);
     assert.notEqual(moved.port, squatted);
-    assert.match(moved.warning, /not this library's server/);
+    assert.match(moved.warning, /cannot prove it is this library's server/);
     assert.ok(seen.every((u) => !/pair|token/.test(u)), 'the impostor got nothing but a health probe');
     await moved.close();
   } finally {
