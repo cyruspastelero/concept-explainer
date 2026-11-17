@@ -8,6 +8,10 @@ import { buildSearchIndex } from './search-index.mjs';
 import { baseSlugFor, freeSlug, sameSource, slugify, sourceIdentity } from './library-model.mjs';
 import { publishExplainer, readManifest, readStoredExplainer, withLibraryLock, writeHub } from './library.mjs';
 import { validateExplainer } from './validate.mjs';
+import { exportInsights, importInsights, subjectOf } from './insights.mjs';
+import { importNotes, validateNotes } from './notes.mjs';
+import { readConfig } from './library.mjs';
+import { slugify as notesFile } from './library-model.mjs';
 
 import { BUNDLE_FORMAT, BUNDLE_VERSION, MAX_BUNDLE_BYTES, MAX_BUNDLE_EXPLAINERS } from './bundle-format.mjs';
 
@@ -38,7 +42,24 @@ function matches(entry, data, selectors) {
  * @param {{ slugs?: string[], type?: string, tag?: string, stack?: string, search?: string }} selectors
  * @returns {{ bundle: object, slugs: string[] }}
  */
-export function createBundle(home, selectors = {}, { now = new Date().toISOString() } = {}) {
+function localNotes(home, subject) {
+  try {
+    const { updatedAt, ...notes } = JSON.parse(readFileSync(`${home}/notes/${notesFile(subject)}.json`, 'utf8'));
+    return notes;
+  } catch {
+    return null;
+  }
+}
+
+// --with-insights: counts and notes for the picked explainers, never the reader profile.
+function learningParts(home, picked) {
+  const insights = picked.map(({ entry }) => ({ slug: entry.slug, insights: exportInsights(home, entry.slug) })).filter((i) => i.insights);
+  const subjects = [...new Set(picked.map(({ data }) => subjectOf(data)).filter(Boolean))];
+  const notes = subjects.map((s) => localNotes(home, s)).filter(Boolean);
+  return { insights, notes };
+}
+
+export function createBundle(home, selectors = {}, { now = new Date().toISOString(), withInsights = false } = {}) {
   const { manifest } = readManifest(home);
   const known = new Map(manifest.explainers.map((e) => [e.slug, e]));
   (selectors.slugs || []).forEach((slug) => {
@@ -56,6 +77,7 @@ export function createBundle(home, selectors = {}, { now = new Date().toISOStrin
       exportedAt: now,
       exportedBy: null,
       explainers: picked.map(({ entry, data }) => ({ slug: entry.slug, data })),
+      ...(withInsights ? learningParts(home, picked) : {}),
     },
     slugs: picked.map(({ entry }) => entry.slug),
   };
@@ -81,6 +103,10 @@ export function parseBundle(text) {
   if (bundle.version !== BUNDLE_VERSION) throw new Error(`import: bundle version ${bundle.version} is not supported (this version reads ${BUNDLE_VERSION})`);
   if (!Array.isArray(bundle.explainers)) throw new Error('import: explainers must be a list');
   if (bundle.explainers.length > MAX_BUNDLE_EXPLAINERS) throw new Error(`import: more than ${MAX_BUNDLE_EXPLAINERS} explainers in one bundle`);
+  ['insights', 'notes'].forEach((key) => {
+    if (bundle[key] === undefined) return;
+    if (!Array.isArray(bundle[key]) || bundle[key].length > MAX_BUNDLE_EXPLAINERS) throw new Error(`import: ${key} must be a list of up to ${MAX_BUNDLE_EXPLAINERS}`);
+  });
   return bundle;
 }
 
@@ -153,18 +179,36 @@ export function planImport(home, bundle, { onConflict = 'rename' } = {}) {
     }
     if (taken && onConflict === 'skip') return summary.skipped.push({ index, title, slug: base, reason: 'already in the library' });
     if (same && onConflict === 'replace') {
-      writes.push({ slug: base, data, replace: true });
+      writes.push({ slug: base, data, replace: true, hint: isObject(item) ? item.slug : undefined });
       planned.add(base);
       return summary.replaced.push({ slug: base, title, note, overwrites: { slug: same.slug, title: same.title } });
     }
     const slug = freeSlug(entries, base);
     const renamed = slug === base ? '' : `renamed from ${base}${same ? '' : ' (that slug holds a different explainer)'}`;
     entries = [...entries, { slug, ...source }];
-    writes.push({ slug, data });
+    writes.push({ slug, data, hint: isObject(item) ? item.slug : undefined });
     planned.add(slug);
     return summary.added.push({ slug, title, note: [renamed, note].filter(Boolean).join('; ') });
   });
-  return { summary, writes };
+  return { summary, writes, ...learningPlan(home, bundle, writes, summary) };
+}
+
+// Insights follow their explainer to its new slug; notes are checked now so
+// the dry run already says which ones would be refused.
+function learningPlan(home, bundle, writes, summary) {
+  if (bundle.insights === undefined && bundle.notes === undefined) return {};
+  if (readConfig(home).learning === false) {
+    Object.assign(summary, { learning: 'off: the insights and notes in this bundle were left out' });
+    return {};
+  }
+  const target = new Map(writes.map((w) => [w.hint, w.slug]));
+  const insights = (bundle.insights || []).filter((i) => isObject(i) && target.has(i.slug)).map((i) => ({ slug: target.get(i.slug), raw: i.insights }));
+  const notes = (bundle.notes || []).map((n) => ({ notes: n, errors: validateNotes(n).errors }));
+  Object.assign(summary, {
+    insights: insights.map((i) => ({ slug: i.slug, note: 'will be imported unless this library has its own' })),
+    notes: notes.map(({ notes: n, errors }) => ({ subject: isObject(n) ? String(n.subject || '') : '', imported: !errors.length, ...(errors.length ? { reason: errors.slice(0, 3).join('; ') } : {}) })),
+  });
+  return { insights, notes: notes.filter((n) => !n.errors.length).map((n) => n.notes) };
 }
 
 /**
@@ -182,6 +226,9 @@ function applyUnlocked(home, plan) {
   plan.writes.forEach(({ slug, data, replace }) => publishExplainer(data, {
     home, slug, skipHub: true, origin: 'import', backupExisting: Boolean(replace),
   }));
-  if (plan.writes.length) writeHub(home, readManifest(home).manifest);
-  return { ...plan.summary, dryRun: false };
+  const summary = { ...plan.summary, dryRun: false };
+  if (plan.insights) summary.insights = plan.insights.map((i) => ({ slug: i.slug, note: importInsights(home, i.slug, i.raw) }));
+  (plan.notes || []).forEach((n) => importNotes(home, n));
+  if (plan.writes.length || plan.insights) writeHub(home, readManifest(home).manifest);
+  return summary;
 }

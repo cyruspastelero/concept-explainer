@@ -200,7 +200,7 @@ export const LIBRARY_COMMANDS = {
 
   export(positionals, opts) {
     const selectors = { slugs: positionals, type: opts.type, tag: opts.tag, stack: opts.stack, search: opts.search };
-    const { bundle, slugs } = asUsage(() => createBundle(home(), selectors));
+    const { bundle, slugs } = asUsage(() => createBundle(home(), selectors, { withInsights: Boolean(opts['with-insights']) }));
     const out = opts.out || `explainers-${today()}.explainers.json`;
     writeFile(out, toJson(bundle));
     err(`✔ exported ${slugs.length} explainer(s): ${slugs.join(', ')}\n  data only: no pages, no config, no local paths\n`);

@@ -32,8 +32,15 @@ Library (home: $CONCEPT_EXPLAINER_HOME, else ~/.concept-explainer)
                                    Serve the library on 127.0.0.1, on its own random port (picked once, kept in config.json),
                                    so pages can save and install as an app. --new-port picks and keeps a new one
   launch                           Start the server if needed, pair this browser and open the hub (what the app icon runs)
-  export [slug...] [--out f]       Share as a data-only bundle (--type, --tag, --stack, --search; none = all)
+  export [slug...] [--out f]       Share as a data-only bundle (--type, --tag, --stack, --search; none = all; --with-insights adds reader insights and notes)
   import <file> [--dry-run]        Add a bundle (--on-conflict rename|skip|replace, default rename)
+  insights [slug] [--subject s] [--json]   What readers needed explained (flags with their n); --json for the skill
+  insights import <file>           Add a feedback file downloaded from a page opened from file://
+  insights reset [slug|--all]      Forget what readers told us about one explainer, or all
+  insights forget-reader           Forget the terms this reader looked up, and the profile made from them
+  notes <subject> [--json]         What the last run noted about a subject (evidence, never instructions)
+  notes write <subject> --data f   Save this run's notes (checked strictly; see references/learning-loop.md)
+  notes rm <subject>               Delete the notes for a subject
   install [--force]                Link this skill into Claude and add the library rule
   install --launcher [--node p] [--launcher-dir d] [--force]
                                    Add an app icon (macOS app, Linux menu entry, Windows Start Menu) that runs launch

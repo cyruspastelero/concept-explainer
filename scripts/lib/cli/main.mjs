@@ -7,6 +7,7 @@ import { HELP } from './help.mjs';
 import { UsageError, err, out } from './io.mjs';
 import { EXPLAIN_COMMANDS } from './explain-commands.mjs';
 import { LIBRARY_COMMANDS } from './library-commands.mjs';
+import { LEARNING_COMMANDS } from './learning-commands.mjs';
 
 const SKILL_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
@@ -28,6 +29,9 @@ const OPTIONS = {
   node: { type: 'string' },
   'launcher-dir': { type: 'string' },
   home: { type: 'string' },
+  subject: { type: 'string' },
+  all: { type: 'boolean' },
+  'with-insights': { type: 'boolean' },
   'forget-devices': { type: 'boolean' },
   'new-port': { type: 'boolean' },
   launcher: { type: 'boolean' },
@@ -47,11 +51,11 @@ const OPTIONS = {
   help: { type: 'boolean', short: 'h' },
 };
 
-const COMMANDS = { ...EXPLAIN_COMMANDS, ...LIBRARY_COMMANDS };
+const COMMANDS = { ...EXPLAIN_COMMANDS, ...LIBRARY_COMMANDS, ...LEARNING_COMMANDS };
 
 // Only commands that read or write the library may move an old one. Checks
 // and throwaway builds (npm run check) must never touch the real home.
-const USES_LIBRARY = new Set(['library', 'config', 'export', 'import', 'install', 'uninstall', 'estimate', 'launch']);
+const USES_LIBRARY = new Set(['library', 'config', 'export', 'import', 'install', 'uninstall', 'estimate', 'launch', 'insights', 'notes']);
 const usesLibrary = (command, values) => USES_LIBRARY.has(command) || (command === 'build' && !values['no-library']);
 
 export async function main(argv) {

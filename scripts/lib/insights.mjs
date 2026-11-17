@@ -327,3 +327,72 @@ export function insightsReport(home, { slug, subject } = {}) {
 }
 
 export { refresh as refreshInsights };
+
+// ---- Sharing: export and a sanitized import ---------------------------------
+
+/** What a bundle carries for one explainer: counts and notes, never flags, batches or the reader profile. */
+export function exportInsights(home, slug) {
+  const ins = readInsights(home, slug);
+  return ins ? { subject: ins.subject, sections: ins.sections, quiz: ins.quiz, lookups: ins.lookups } : null;
+}
+
+const HIDDEN_TEXT = /[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁦-⁩]/;
+const int = (value) => (Number.isInteger(value) && value >= 0 && value <= 1e6 ? value : 0);
+const okNote = (n) => isObject(n) && ['more', 'basic'].includes(n.vote) && typeof n.text === 'string' && n.text.trim()
+  && n.text.length <= 140 && !HIDDEN_TEXT.test(n.text) && /^\d{4}-\d{2}-\d{2}$/.test(String(n.date));
+
+// Rebuild imported insights field by field against the explainer's own
+// sections: only known routes with the right fingerprint, whole counts,
+// clean one-line notes. Flags are never taken from a bundle.
+function sanitizeImported(raw, slug, data) {
+  const sections = sectionsFor(data);
+  const glossary = new Map((Array.isArray(data.glossary) ? data.glossary : []).filter(isObject).map((g) => [lower(g.term), g.term]));
+  const known = strings(data);
+  const src = isObject(raw) ? raw : {};
+  const out = { version: 1, slug, subject: subjectOf(data), sections: {}, quiz: {}, lookups: { glossary: {}, hints: {} }, batches: [], flags: [], origin: 'imported' };
+  Object.entries(isObject(src.sections) ? src.sections : {}).forEach(([route, s]) => {
+    if (!isObject(s) || sections[route] !== s.fp) return;
+    out.sections[route] = {
+      fp: s.fp,
+      votes: Object.fromEntries(VOTES.map((v) => [v, int(isObject(s.votes) ? s.votes[v] : 0)])),
+      notes: (Array.isArray(s.notes) ? s.notes : []).filter(okNote).slice(0, MAX_NOTES).map((n) => ({ date: n.date, vote: n.vote, text: n.text })),
+      views: int(s.views),
+      finished: int(s.finished),
+      time: Object.fromEntries(TIME_BUCKETS.map((b) => [b, int(isObject(s.time) ? s.time[b] : 0)])),
+    };
+  });
+  Object.entries(isObject(src.quiz) ? src.quiz : {}).forEach(([n, q]) => {
+    if (!isObject(q) || sections[`quiz/${n}`] !== q.fp) return;
+    const wrong = Object.fromEntries(Object.entries(isObject(q.wrong) ? q.wrong : {}).filter(([i]) => /^\d{1,2}$/.test(i)).map(([i, c]) => [i, int(c)]));
+    const answers = int(q.answers);
+    out.quiz[n] = { fp: q.fp, answers, firstWrong: Math.min(int(q.firstWrong), answers), misses: int(q.misses), wrong };
+  });
+  const lookups = isObject(src.lookups) ? src.lookups : {};
+  Object.entries(isObject(lookups.glossary) ? lookups.glossary : {}).forEach(([term, n]) => {
+    const real = glossary.get(lower(term));
+    if (real) out.lookups.glossary[real] = int(n);
+  });
+  Object.entries(isObject(lookups.hints) ? lookups.hints : {}).forEach(([label, n]) => {
+    if (known.has(label)) out.lookups.hints[label] = int(n);
+  });
+  return out;
+}
+
+/**
+ * Keep a bundle's insights for an imported explainer, unless this library
+ * already has its own (those are never overwritten). Flags are recomputed.
+ * @returns {string} what happened, for the import summary
+ */
+export function importInsights(home, slug, raw, { now = Date.now } = {}) {
+  if (readConfig(home).learning === false) return 'learning is off; left out';
+  return withLibraryLock(home, () => {
+    if (readInsights(home, slug)) return 'kept the local insights';
+    const data = storedData(home, slug);
+    if (!data) return 'no explainer to attach them to';
+    save(fileOf(home, slug), { ...sanitizeImported(raw, slug, data), updatedAt: new Date(now()).toISOString() });
+    refresh(home);
+    return 'imported';
+  });
+}
+
+export { subjectOf };
