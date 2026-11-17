@@ -85,7 +85,8 @@ Two styles: `clean` (the default) and `playful`. The template draws both; the da
 | `budgetUsd` | a number of 0 or more, or `null` | `null` | skip the go-ahead wait when the estimate fits |
 | `confirmBeforeStart` | `true`, `false` | `true` | the estimate step |
 | `instructions` | plain text, at most 2,000 characters | `""` | extra guidance for the skill (house style, terms) |
-| `servePort` | 1024 to 65535 | `4747` | `library serve`, `launch` (see `references/launcher.md`) |
+| `servePort` | 1024 to 65535, or `null` | `null` (a random port from 20000 to 60999 is picked and kept on first use) | `library serve`, `launch` (see `references/launcher.md`) |
+| `deviceTokenDays` | 1 to 365 | `30` | how long a paired device's token lives without use |
 | `serveIdleMinutes` | 0 to 1440, or `null` | `null` | idle stop (null: launcher 30, manual serve never) |
 | `learning` | `true`, `false` | `true` | the learning loop: reader signals, insights and agent notes (see `references/learning-loop.md`) |
 
