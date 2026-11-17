@@ -45,9 +45,10 @@ test('clicking the installed macOS app starts the server, pairs and opens the hu
   chmodSync(opener, 0o755);
   try {
     execFileSync(join(app, 'Contents', 'MacOS', 'concept-explainer'), { env: { ...process.env, CONCEPT_EXPLAINER_OPENER: opener }, timeout: 20000 });
-    const url = readFileSync(opened, 'utf8');
-    const match = url.match(new RegExp(`^http://127\\.0\\.0\\.1:${port}/index\\.html#pair=([0-9a-f]{16}\\.[0-9a-f]{64})$`));
-    assert.ok(match, url);
+    const file = readFileSync(opened, 'utf8');
+    assert.match(file, /[\\/]\.serve[\\/]open-[0-9a-f]{16}\.html$/, 'the browser is handed a private file, never a URL with the code');
+    const match = readFileSync(file, 'utf8').match(new RegExp(`"http://127\\.0\\.0\\.1:${port}/index\\.html#pair=([0-9a-f]{16}\\.[0-9a-f]{64})"`));
+    assert.ok(match, file);
     const state = readServerState(home);
     assert.equal(state.launched, true);
     assert.equal(state.idleMinutes, 30);

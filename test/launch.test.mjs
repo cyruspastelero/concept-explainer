@@ -41,7 +41,8 @@ test('launch starts one detached server, waits for health, pairs and opens the h
     assert.notEqual(state.pid, process.pid, 'the server runs in its own process');
     assert.equal(state.idleMinutes, 30, 'a launched server stops when idle');
     assert.equal((await fetchHealth(port)).instance, state.instance);
-    assert.match(opened[0], new RegExp(`^http://127\\.0\\.0\\.1:${port}/index\\.html#pair=[0-9a-f]{16}\\.[0-9a-f]{64}$`));
+    // The opener gets launch's private redirect file; the code is inside it, not in argv.
+    assert.match(readFileSync(opened[0], 'utf8'), new RegExp(`http://127\\.0\\.0\\.1:${port}/index\\.html#pair=[0-9a-f]{16}\\.[0-9a-f]{64}`));
     const second = await launch({ home, port, opener: (url) => opened.push(url) });
     assert.equal(second.started, false, 'a running server is reused');
     assert.equal(readServerState(home).instance, state.instance);
@@ -118,7 +119,7 @@ test('an impostor answering our fingerprint on the app port gets no pairing code
     const result = await launch({ home, port, fallbackPorts: [fallback], opener: (url) => opened.push(url) });
     assert.equal(result.port, fallback);
     assert.match(result.warning, /installed app only works on/);
-    assert.ok(opened[0].startsWith(`http://127.0.0.1:${fallback}/`));
+    assert.match(readFileSync(opened[0], 'utf8'), new RegExp(`"http://127\\.0\\.0\\.1:${fallback}/index\\.html#pair=`));
     assert.ok(seen.every((u) => !/pair/.test(u)), 'nothing secret reached the impostor');
   } finally {
     impostor.close();

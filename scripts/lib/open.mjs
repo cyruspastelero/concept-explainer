@@ -56,3 +56,22 @@ export function openUrl(url, { platform = process.platform, exec = execFileSync,
   const { command, args, ignoreExitCode } = openCommand(platform, url);
   return run(command, args, ignoreExitCode, exec, url);
 }
+
+const LAUNCH_FILE = /[\\/]\.serve[\\/]open-[0-9a-f]{16}\.html$/;
+
+/**
+ * Open launch's private redirect file (<home>/.serve/open-<id>.html) in the
+ * browser. Only that file name, as an absolute path, so the program's argv
+ * shows a path and never the pairing code inside. CONCEPT_EXPLAINER_OPENER
+ * stands in for the browser, as for openUrl.
+ */
+export function openLaunchFile(path, { platform = process.platform, exec = execFileSync, env = process.env } = {}) {
+  if (!isAbsolute(path) || !LAUNCH_FILE.test(path)) throw new Error(`open: refusing to open "${path}"; only launch's redirect file opens`);
+  const custom = env.CONCEPT_EXPLAINER_OPENER;
+  if (custom) {
+    if (!isAbsolute(custom)) throw new Error('open: CONCEPT_EXPLAINER_OPENER must be an absolute path');
+    return run(custom, [path], false, exec, path);
+  }
+  const { command, args, ignoreExitCode } = openCommand(platform, path);
+  return run(command, args, ignoreExitCode, exec, path);
+}

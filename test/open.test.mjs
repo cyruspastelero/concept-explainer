@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { openCommand, openPath } from '../scripts/lib/open.mjs';
+import { openCommand, openLaunchFile, openPath } from '../scripts/lib/open.mjs';
 
 const HOSTILE = 'C:\\Users\\a&calc^.exe|x\\index.html';
 
@@ -33,4 +33,16 @@ test('the path is made absolute first, so it can never read as an option', () =>
   openPath('-n --args evil.html', { platform: 'darwin', exec: (cmd, args) => calls.push(args) });
   assert.ok(calls[0][0].startsWith('/'), calls[0][0]);
   assert.ok(calls[0][0].endsWith('/-n --args evil.html'));
+});
+
+test('openLaunchFile opens only launch\'s redirect file, by absolute path, with no shell', () => {
+  const calls = [];
+  const exec = (command, args) => calls.push([command, ...args]);
+  const file = '/home/u/.concept-explainer/.serve/open-0123456789abcdef.html';
+  openLaunchFile(file, { platform: 'linux', exec, env: {} });
+  assert.deepEqual(calls, [['xdg-open', file]]);
+  for (const bad of ['relative/.serve/open-0123456789abcdef.html', '/tmp/evil.html', 'http://127.0.0.1:4747/index.html#pair=x', '/h/.serve/open-0123456789abcdef.html; rm -rf ~']) {
+    assert.throws(() => openLaunchFile(bad, { platform: 'linux', exec, env: {} }), /refusing to open/, bad);
+  }
+  assert.equal(calls.length, 1);
 });

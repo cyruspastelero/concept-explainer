@@ -9,7 +9,7 @@ import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { extname, join, resolve, sep } from 'node:path';
 import { readConfig, readManifest, rebuildLibrary, withLibraryLock, writeConfig } from './library.mjs';
 import { appRoute } from './app-routes.mjs';
-import { isDeviceToken, redeemPairCode } from './pairing.mjs';
+import { isDeviceToken, redeemPairCode, sweepOpenFiles } from './pairing.mjs';
 import { APP_NAME, PAIR_HEADER, clearServerState, healthProof, writeServerState } from './serve-state.mjs';
 import { MAX_BUNDLE_BYTES, applyImport, createBundle, parseBundle, planImport } from './bundle.mjs';
 import { SLUG_PATTERN } from './library-model.mjs';
@@ -61,6 +61,7 @@ const fail = (res, status, error) => sendJson(res, status, { error });
 // only if it is free (no Atomics.wait), and between tries the server keeps
 // serving. After SERVE_LOCK_WAIT_MS the request gets 503 "library is busy".
 export const SERVE_LOCK_WAIT_MS = 2000;
+const SWEEP_MS = 30000;
 const SERVE_LOCK_RETRY_MS = 50;
 const BUSY = Symbol('busy');
 const nap = (ms) => new Promise((done) => { setTimeout(done, ms); });
@@ -387,10 +388,12 @@ export function startLibraryServer({
   };
   const server = createServer(handler(state));
   let timer = null;
+  let sweeper = null;
   let markStopped;
   const stopped = new Promise((r) => { markStopped = r; });
   const close = () => new Promise((closed) => {
     if (timer) clearInterval(timer);
+    if (sweeper) clearInterval(sweeper);
     clearServerState(home, state.instance);
     if (!server.listening) { closed(); markStopped(); return; }
     server.close(() => { closed(); markStopped(); });
@@ -401,6 +404,9 @@ export function startLibraryServer({
     server.listen(port, HOST, () => {
       state.port = server.address().port;
       if (writeState) {
+        // launch's redirect files go once their code expires, even if never used.
+        sweeper = setInterval(() => sweepOpenFiles(home), SWEEP_MS);
+        sweeper.unref();
         writeServerState(home, {
           pid: process.pid, port: state.port, instance: state.instance, secret: state.secret, version: VERSION, startedAt: new Date(now()).toISOString(), idleMinutes,
           launched: process.env.CONCEPT_EXPLAINER_LAUNCHED === '1',

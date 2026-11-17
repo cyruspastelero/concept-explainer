@@ -9,12 +9,12 @@ Code: `scripts/lib/serve.mjs`, `serve-state.mjs` (server.json, health, ports), `
 | Command | What it does |
 |---|---|
 | `library serve [--port n] [--idle m] [--forget-devices]` | Serve on `127.0.0.1`, port `servePort` (default 4747; `--port 0` picks one). `--idle` stops it after that many quiet minutes (default `serveIdleMinutes`, else never). `--forget-devices` revokes every paired device first. |
-| `launch` | Reuse our running server, or start one detached that stops after 30 idle minutes, then open `index.html#pair=<code>`. |
+| `launch` | Reuse our running server, or start one detached that stops after 30 idle minutes, then open a private redirect file that sends the browser to `index.html#pair=<code>`. The code is never on a command line, printed or returned. |
 | `install --launcher [--node p] [--launcher-dir d] [--force]` | Write the app icon for this platform. `--node` picks a stable node; `--launcher-dir` writes somewhere other than the default (tests use it). |
 | `uninstall --launcher` | Remove what install wrote, if unchanged, and stop a server the launcher started. |
 | `--home <dir>` | Any command: use that library for this run. The launcher bakes it in. |
 
-Config: `servePort` (1024 to 65535, default 4747) and `serveIdleMinutes` (0 to 1440, or `null`: the launcher uses 30 and a manual `serve` never stops).
+Config: `servePort` (1024 to 65535, default 4747), `serveIdleMinutes` (0 to 1440, or `null`: the launcher uses 30 and a manual `serve` never stops) and `deviceTokenDays` (1 to 365, default 30: a device token unused that long stops working).
 
 ## One origin
 
@@ -66,7 +66,7 @@ These come from a fixed map in the package, never from the request path. Library
 
    `200 { "token" }`: keep it in `localStorage` under `concept-explainer:device` (inside try/catch). `403 { "error" }`: the code is unknown, used or expired (120 s), or a header is wrong; carry on as unpaired. A code works once, and a wrong guess burns it.
 3. **Write.** Send `X-Concept-Explainer-Token: <device token>` on `/api/config`, `/api/export` and `/api/import`, as with the per-run token. The `#token=` hand-off from `library serve` still works. Without a token, behave as on `file://`.
-4. **Revoked.** A 403 on a request with a device token means it was revoked (`library serve --forget-devices`): drop it and show the copy-a-command fallback.
+4. **Revoked or expired.** A 403 on a request with a device token means it was revoked (`library serve --forget-devices`) or went unused for `deviceTokenDays`: drop it and show the copy-a-command fallback. Each accepted use pushes the expiry out again (saved at most once a day).
 
 ### Service worker rules
 
@@ -76,9 +76,10 @@ Cache GET, same origin, status 200 only, and **never `/api/*`** (fetching `/api/
 
 1. Reuse the server in `server.json` if it proves itself.
 2. Otherwise take `<home>/.serve/start.lock` (atomic mkdir; cleared when its pid is gone), check again, and start `library serve --port <port> --idle 30` detached, logging to `<home>/.serve/serve.log` (0600, rotated once at 1 MB). Wait up to 5 s for proof of health.
-3. Write a one-time pairing code (`<home>/.serve/pair/<id>.json`, sha256 only, 120 s) and open `http://127.0.0.1:<port>/index.html#pair=<code>`.
+3. Write a one-time pairing code (`<home>/.serve/pair/<id>.json`, sha256 only, 120 s) and a redirect file `<home>/.serve/open-<id>.html` (0600, `wx`): a meta refresh and a hashed inline `location.replace` to `http://127.0.0.1:<port>/index.html#pair=<code>`, no referrer. Open that file. The browser's command line then shows only the file path, so other accounts cannot read the code with `ps`.
+4. The redirect file is removed when its code is tried (`/api/pair`, right or wrong), by the server every 30 s once the code has expired or been used, by `--forget-devices`, and by the next `launch`.
 
-Concurrent launches start one server. Only `http://127.0.0.1:<port>/` URLs are ever opened. `CONCEPT_EXPLAINER_OPENER`, if set, must be an absolute path to a program that receives the URL as its one argument; tests use it in place of a browser.
+Concurrent launches start one server. Only the redirect file is ever opened, by absolute path. `CONCEPT_EXPLAINER_OPENER`, if set, must be an absolute path to a program that receives that path as its one argument; tests use it in place of a browser.
 
 ## The app icon
 
@@ -95,3 +96,7 @@ Every written path and its sha256 go to `<home>/.serve/launcher.json` (0600). In
 ## Known limits
 
 While the server runs, other accounts on the same machine can read pages on `127.0.0.1` (not data files, and they cannot write: writes need a token). Run `library serve` only on machines you trust with that.
+
+**A program that squats the port while our server is stopped can keep a service worker on the origin.** The origin is fixed (`127.0.0.1:4747`) so the installed app keeps its storage, and the launcher's server stops when idle, which frees the port. Another local program can take the port then, register a service worker on `http://127.0.0.1:4747`, and leave. That worker answers every later navigation to the origin, including the launcher's `#pair=<code>`, before our server sees the request. It can read the code, pair as the user on our real server and get a device token. `launch` refuses to reuse a server that cannot prove itself, so a squatter that still holds the port gets nothing; the risk is a worker left behind.
+
+We checked the obvious fix in Chrome (2026-11-18) and it does not work. The redirect file sent `POST /api/reset` with `mode: 'no-cors'` and the real server answered `Clear-Site-Data: "storage"`. The request reached the server (`Origin: null`), but the hostile worker stayed and read the code: a request from a `file://` page is a third-party, partitioned context, so the header clears only the partitioned copy. The browser's own update check for the worker script does not help either: the squatter served it with a one-year cache and `updateViaCache: 'all'`, and Chrome took it from cache, so the update never reached our server. Device tokens expire (`deviceTokenDays`) and `--forget-devices` revokes them all. That bounds what a stolen token is worth but does not stop the theft. Until this is fixed, treat other local accounts and programs as able to pair if they win that race.
