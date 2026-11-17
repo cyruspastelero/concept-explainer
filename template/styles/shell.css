@@ -227,3 +227,6 @@ html:has(.sheet[open]) { overflow: hidden; }
   :root .sheet .side-util .util { min-height: 48px; font-size: 17px; }
 }
 .pick-option.is-card[aria-checked="true"] .pick-option-desc { color: var(--body); }
+
+/* The app, read offline: one quiet line at the top, no colour fill. */
+.offline-banner { margin: 0; padding: 10px 24px; font-size: 14px; color: var(--body); background: var(--surface); box-shadow: inset 0 -1px 0 var(--line); }

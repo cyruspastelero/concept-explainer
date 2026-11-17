@@ -69,8 +69,10 @@ function withServe(context) {
       token = null;
     }
   }
-  if (!served || !token) return context;
-  return { ...context, serve: { ...(context.serve || {}), token } };
+  // A paired browser (the app launcher) keeps its device token instead.
+  const device = !token && served ? deviceToken() : null;
+  if (!served || !(token || device)) return context;
+  return { ...context, serve: { ...(context.serve || {}), token: token || device, device: Boolean(device) } };
 }
 
 // ---------- Quick theme: a small menu by the gear, and Shift+D ----------
@@ -150,6 +152,16 @@ function settingsView(registry, { context = {}, config = null, extra = [] } = {}
     h('div', { class: 'settings-body' },
       readingGroup(registry),
       defaultsSlot(context, config),
-      extra));
+      extra,
+      pairedGroup()));
   return { key: 'settings', title: 'Settings', nav: 'Settings', section, controller: null };
+}
+
+// Settings > This browser, only when the app launcher paired it.
+function pairedGroup() {
+  const row = pairedRow();
+  if (!row) return null;
+  return h('section', { class: 'panel settings-group', 'aria-labelledby': 'settings-device-title' },
+    h('div', { class: 'settings-legend' }, h('h2', { id: 'settings-device-title' }, 'This browser'), h('span', { class: 'eyebrow quiet' }, 'Paired by the app')),
+    row);
 }

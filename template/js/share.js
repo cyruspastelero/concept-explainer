@@ -77,7 +77,8 @@ function pageSnapshot(style, styleText, cspTag) {
     const key = m.hasAttribute('name') ? 'name' : 'property';
     return `<meta ${key}="${escapeAttr(m.getAttribute(key))}" content="${escapeAttr(m.getAttribute('content'))}">`;
   });
-  const links = [...head.querySelectorAll('link[rel]')].map((l) => {
+  // Never the app manifest: a saved page is a plain file, not the app.
+  const links = [...head.querySelectorAll('link[rel]:not([rel="manifest"])')].map((l) => {
     const cross = l.hasAttribute('crossorigin') ? ' crossorigin' : '';
     return `<link rel="${escapeAttr(l.getAttribute('rel'))}" href="${escapeAttr(l.getAttribute('href'))}"${cross}>`;
   });
@@ -138,7 +139,10 @@ function serveApi(context, name) {
   return `/api/${name}`;
 }
 
+const UNPAIRED_TEXT = 'This browser is no longer paired. Open the app again to pair it; until then the page shows the commands.';
+
 function serveFetch(context, url, options = {}) {
+  if (PWA.offline) return Promise.reject(new Error(OFFLINE_TEXT));
   return fetch(url, { ...options, headers: { ...(options.headers || {}), 'x-concept-explainer-token': context.serve.token } })
     .then((response) => response.text().then((body) => {
       let json = null;
@@ -146,6 +150,13 @@ function serveFetch(context, url, options = {}) {
         json = body ? JSON.parse(body) : null;
       } catch (error) {
         json = null;
+      }
+      // A refused device token was revoked or went unused too long: drop it,
+      // and the page falls back to the copy-a-command view on reload.
+      if (response.status === 403 && context.serve.device) {
+        forgetDeviceToken();
+        window.setTimeout(() => window.location.reload(), RELOAD_DELAY_MS * 3);
+        throw new Error(UNPAIRED_TEXT);
       }
       if (!response.ok) throw new Error((json && (list(json.errors).join(' ') || json.error)) || `The server answered ${response.status}.`);
       return { json, body };
@@ -178,6 +189,7 @@ function hubShareGroup(context, getSelection) {
   const importStatus = h('p', { class: 'settings-status', role: 'status', 'aria-live': 'polite' });
   const exportOut = h('div', { class: 'settings-commands' });
   const exportButton = h('button', { class: 'btn', type: 'button' }, icon('download'), 'Export');
+  if (served) needsServer(exportButton);
   exportButton.addEventListener('click', () => {
     const { slugs, args, label, none } = getSelection();
     if (none) {
@@ -221,7 +233,8 @@ function fileSize(bytes) {
 // The drop zone with its hidden file input and "choose a file" button.
 function importDropZone() {
   const input = h('input', { class: 'sr-only', type: 'file', id: 'import-file', accept: '.json,application/json', tabindex: '-1', 'aria-hidden': 'true' });
-  const choose = h('button', { class: 'link drop-choose', type: 'button', onclick: () => input.click() }, 'or choose a file');
+  const choose = needsServer(h('button', { class: 'link drop-choose', type: 'button', onclick: () => input.click() }, 'or choose a file'));
+  needsServer(input);
   const picked = h('div', { class: 'drop-picked', hidden: true });
   const zone = h('div', { class: 'drop-zone', 'aria-describedby': 'import-file-hint' },
     icon('upload'), h('span', { class: 'drop-title' }, 'Drop a .explainers.json file'), choose, picked);
@@ -265,7 +278,7 @@ function importPickedRow(file, onRemove) {
 // What the dry run found, with the Import button; or what the import did.
 function importOutcome(out, json, { dryRun, apply }) {
   if (dryRun) {
-    const button = h('button', { class: 'btn primary', type: 'button' }, 'Import');
+    const button = needsServer(h('button', { class: 'btn primary', type: 'button' }, 'Import'));
     button.addEventListener('click', () => apply(button));
     fill(out, importSummary(json), h('div', { class: 'btn-row' }, button));
     return;
@@ -330,7 +343,7 @@ function importServed(context, status, out) {
     });
   }
   wireDropZone(drop, (file) => {
-    if (!file || busy) return;
+    if (!file || busy || PWA.offline) return;
     if (file.size > BUNDLE_MAX_BYTES) { status.textContent = `${file.name} is over ${BUNDLE_MAX_LABEL}. Bundles must be smaller.`; return; }
     file.text().then((body) => {
       pending = { name: file.name, text: body };

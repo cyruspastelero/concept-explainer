@@ -131,6 +131,7 @@ function kitSections(kinds, patterns) {
 }
 
 function bootGallery() {
+  if (deferBoot(bootGallery)) return;
   const context = readContext();
   applyLook(context);
   applyReading();

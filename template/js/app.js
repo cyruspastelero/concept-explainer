@@ -239,6 +239,7 @@ function fatal(app, message) {
 }
 
 function boot() {
+  if (deferBoot(boot)) return;
   // The serve token leaves the address bar before the router reads it.
   const context = withServe(readContext());
   applyLook(context);

@@ -14,8 +14,8 @@ export const DOM_LAYER = Object.freeze(['dom.js', 'truncate.js', 'theme.js']);
 // Files that together make one feature; tests read them as one source.
 export const SETTINGS_FILES = Object.freeze(['settings.js', 'settings-defaults.js', 'share.js']);
 export const HUB_FILES = Object.freeze(['hub-search.js', 'hub-thumbs.js', 'library.js']);
-export const SCRIPT_ORDER = [...DOM_LAYER, 'icons.js', 'map.js', 'models.js', 'flow.js', 'changes.js', 'lessons.js', 'chapters/kit.js', 'chapters/viz-core.js', 'chapters/viz-linear.js', 'chapters/viz-graph.js', 'chapters/viz-grid.js', 'chapters/visuals.js', 'chapters/context.js', 'chapters/diff.js', 'chapters/options.js', 'chapters/risks.js', 'chapters/rollout.js', 'chapters/timeline.js', 'chapters/code.js', 'chapters/hooks.js', 'picker.js', ...SETTINGS_FILES, 'sections.js', 'app.js'];
-const LIBRARY_SCRIPT_ORDER = [...DOM_LAYER, 'icons.js', 'picker.js', ...SETTINGS_FILES, ...HUB_FILES];
+export const SCRIPT_ORDER = [...DOM_LAYER, 'icons.js', 'map.js', 'models.js', 'flow.js', 'changes.js', 'lessons.js', 'chapters/kit.js', 'chapters/viz-core.js', 'chapters/viz-linear.js', 'chapters/viz-graph.js', 'chapters/viz-grid.js', 'chapters/visuals.js', 'chapters/context.js', 'chapters/diff.js', 'chapters/options.js', 'chapters/risks.js', 'chapters/rollout.js', 'chapters/timeline.js', 'chapters/code.js', 'chapters/hooks.js', 'picker.js', 'pwa.js', ...SETTINGS_FILES, 'sections.js', 'app.js'];
+const LIBRARY_SCRIPT_ORDER = [...DOM_LAYER, 'icons.js', 'picker.js', 'pwa.js', ...SETTINGS_FILES, ...HUB_FILES];
 // Stylesheets in template/styles/, joined in cascade order. A template folder
 // without styles/ (older custom templates) falls back to one styles.css.
 export const STYLE_ORDER = ['base.css', 'shell.css', 'views.css', 'diagrams.css', 'lessons.css', 'chapters.css', 'visuals.css', 'hub.css', 'kit.css', 'playful.css'];

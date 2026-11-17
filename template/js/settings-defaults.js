@@ -255,6 +255,7 @@ function defaultsGroup(context, initialConfig) {
   const fields = Object.fromEntries(Object.keys(CONFIG_FIELDS).map((key) => [key, defaultsRow(key, saved[key])]));
   const current = () => ({ ...saved, ...Object.fromEntries(Object.keys(CONFIG_FIELDS).map((key) => [key, fields[key].control.read()])) });
   const submit = h('button', { class: 'btn primary', type: 'submit' }, serve ? 'Save' : 'Show the commands');
+  if (serve) needsServer(submit);
   const form = h('form', { class: 'settings-form', novalidate: true }, Object.values(fields).map((f) => f.el),
     h('p', { class: 'setting-hint' }, 'Chapters per type are set from the command line: ',
       h('code', null, `${CLI_NAME} config set chapters '{"repo":{"quiz":false}}'`)),

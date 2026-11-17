@@ -405,6 +405,7 @@ function mountHub(app, shell, registry, views) {
 }
 
 function bootLibrary() {
+  if (deferBoot(bootLibrary)) return;
   const pageContext = readContext();
   applyLook(pageContext);
   applyReading();

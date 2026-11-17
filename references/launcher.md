@@ -2,7 +2,7 @@
 
 The library can feel like an app without Electron or Tauri. HTML stays the core: every explainer is still one file that works from `file://` and can be shared. The launcher adds three things: `library serve` as an installable web app on a fixed local origin, `launch` (start or reuse the server, pair the browser, open the hub), and an app icon per platform that runs `launch`.
 
-Code: `scripts/lib/serve.mjs`, `serve-state.mjs` (server.json, health, ports), `pairing.mjs` (codes, device tokens), `app-routes.mjs` (manifest, worker, icons), `launch.mjs`, `launcher.mjs` (install and uninstall). The service worker and the page side (`template/js/pwa.js`, Settings) belong to the template; `template/app/sw.js` is a placeholder until then.
+Code: `scripts/lib/serve.mjs`, `serve-state.mjs` (server.json, health, ports), `pairing.mjs` (codes, device tokens), `app-routes.mjs` (manifest, worker, icons), `launch.mjs`, `launcher.mjs` (install and uninstall). The page side is `template/js/pwa.js` (manifest link, worker registration, pairing, the device token, the offline banner) with Settings > This browser; the service worker is `template/app/sw.js`.
 
 ## Commands
 

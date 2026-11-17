@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-dKjw8Ipz4S+3N83N+DF2ziKeIO5H2TlLiexgFUy9dMU=' 'sha256-OsQ1Kdx1rTrgCnOuA1vyudPEnexNWRXwgmNdLHzbngQ='; style-src 'sha256-B3mZ9fls9/kISPYo0bKwZlP1rMHryf09UhCX09BP9TM=' 'sha256-LmLhSVOBWPiGLyfBcRy+1sjddzJmItnOxbanLIYUh8Q='; style-src-attr 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-dKjw8Ipz4S+3N83N+DF2ziKeIO5H2TlLiexgFUy9dMU=' 'sha256-fBZu5i9ISkQC626iowQYHnCEJ7lrGJ6Ht98zq1Rfh6g='; style-src 'sha256-PY6rU03l3eau9vqcZ7zbziuUXX+IQaNjR/jsOg5M+l0=' 'sha256-LmLhSVOBWPiGLyfBcRy+1sjddzJmItnOxbanLIYUh8Q='; style-src-attr 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="generator" content="concept-explainer">
 <meta name="color-scheme" content="light dark">
@@ -466,6 +466,9 @@ html:has(.sheet[open]) { overflow: hidden; }
   :root .sheet .side-util .util { min-height: 48px; font-size: 17px; }
 }
 .pick-option.is-card[aria-checked="true"] .pick-option-desc { color: var(--body); }
+
+/* The app, read offline: one quiet line at the top, no colour fill. */
+.offline-banner { margin: 0; padding: 10px 24px; font-size: 14px; color: var(--body); background: var(--surface); box-shadow: inset 0 -1px 0 var(--line); }
 
 /* ---- views.css ---- */
 /* Views: title blocks, the Overview dashboard, code blocks, display-title sizing. */
@@ -6448,6 +6451,177 @@ function comboPicker({ options, value, id, describedBy }) {
   return { el: root, read: () => input.value.trim(), focus: () => input.focus() };
 }
 
+// ---- pwa.js ----
+// The installable app: only when a page is served by `library serve` on
+// http://127.0.0.1 (references/launcher.md, "Page contract"). From file://
+// nothing here runs: no manifest link, no worker, no pairing, no token.
+const DEVICE_KEY = 'concept-explainer:device';
+const PAIR_HASH = /^#pair=([0-9a-f]{16}\.[0-9a-f]{64})$/;
+const DEVICE_TOKEN = /^[0-9a-f]{64}$/;
+const HEALTH_TIMEOUT_MS = 2500;
+const OFFLINE_TEXT = 'Reading offline. Start Concept Explainer to save settings or import.';
+const PWA = { offline: false };
+
+/** True only on the app's own origin. */
+function isServedOrigin() {
+  return window.location.protocol === 'http:' && window.location.hostname === '127.0.0.1';
+}
+
+// ---------- Device token (localStorage, in try/catch) ----------
+function deviceToken() {
+  try {
+    const token = window.localStorage.getItem(DEVICE_KEY);
+    return token && DEVICE_TOKEN.test(token) ? token : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function storeDeviceToken(token) {
+  try {
+    window.localStorage.setItem(DEVICE_KEY, token);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function forgetDeviceToken() {
+  try {
+    window.localStorage.removeItem(DEVICE_KEY);
+  } catch (error) {
+    // Nothing stored, nothing to forget.
+  }
+}
+
+// ---------- Manifest and worker ----------
+// The link and the worker exist only in the live page: Save as page leaves
+// out link[rel="manifest"], and bundles carry data only.
+function installAppShell() {
+  if (!isServedOrigin()) return false;
+  if (!document.head.querySelector('link[rel="manifest"]')) {
+    document.head.append(h('link', { rel: 'manifest', href: '/manifest.webmanifest' }));
+  }
+  if (window.navigator.serviceWorker) {
+    window.navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {
+      // The page works the same without the worker; only offline reading is lost.
+    });
+  }
+  return true;
+}
+
+// ---------- Pairing ----------
+// The launcher lands on index.html#pair=<code>. Take the code and clear the
+// hash before the router or anything else can read it.
+function takePairCode() {
+  if (!isServedOrigin()) return null;
+  const match = window.location.hash.match(PAIR_HASH);
+  if (!match) return null;
+  try {
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
+  } catch (error) {
+    window.location.hash = '';
+  }
+  return match[1];
+}
+
+/** POST the code once. Resolves to true when this browser is now paired. */
+function pairDevice(code) {
+  return fetch('/api/pair', {
+    method: 'POST', credentials: 'same-origin',
+    headers: { 'content-type': 'application/json', 'x-concept-explainer-pair': '1' },
+    body: JSON.stringify({ code }),
+  }).then((response) => (response.ok ? response.json() : null))
+    .then((body) => Boolean(body && typeof body.token === 'string' && DEVICE_TOKEN.test(body.token) && storeDeviceToken(body.token)))
+    .catch(() => false);
+}
+
+/**
+ * Boot entry points call this first: true means it took over and will call
+ * start again once pairing is settled (synchronously when there is nothing
+ * to pair, so file:// pages boot exactly as before).
+ */
+function deferBoot(start) {
+  if (PWA.booting) return false;
+  PWA.booting = true;
+  startPage(start);
+  return true;
+}
+
+/**
+ * Run start() once any pairing hand-off is done. A wrong or used code leaves
+ * the page unpaired; it still starts.
+ */
+function startPage(start) {
+  installAppShell();
+  const code = takePairCode();
+  if (!code) {
+    watchServer();
+    start();
+    return;
+  }
+  pairDevice(code).then(() => { watchServer(); start(); });
+}
+
+// ---------- Offline ----------
+// The worker never caches /api/*, so a failed health check means the server
+// is stopped: say so once, and switch off everything that writes.
+function watchServer() {
+  if (!isServedOrigin()) return;
+  const controller = 'AbortController' in window ? new AbortController() : null;
+  const timer = controller ? window.setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS) : null;
+  fetch('/api/health', { cache: 'no-store', signal: controller ? controller.signal : undefined })
+    .then((response) => { if (!response.ok) throw new Error(`health ${response.status}`); })
+    .catch(() => markOffline())
+    .finally(() => { if (timer) window.clearTimeout(timer); });
+}
+
+function markOffline() {
+  PWA.offline = true;
+  document.documentElement.dataset.offline = 'true';
+  disableServerControls(document);
+  if (document.getElementById('offline-banner')) return;
+  const banner = h('p', { class: 'offline-banner', id: 'offline-banner', role: 'status' }, OFFLINE_TEXT);
+  const main = document.getElementById('main');
+  if (main) main.prepend(banner); else document.body.prepend(banner);
+}
+
+// Controls that need the server carry data-needs-server.
+function disableServerControls(root) {
+  if (!PWA.offline) return;
+  root.querySelectorAll('[data-needs-server]').forEach((el) => {
+    el.disabled = true;
+    el.setAttribute('aria-disabled', 'true');
+  });
+}
+
+/** Mark a control as needing the server; disabled at once while offline. */
+function needsServer(el) {
+  el.setAttribute('data-needs-server', '');
+  if (PWA.offline) {
+    el.disabled = true;
+    el.setAttribute('aria-disabled', 'true');
+  }
+  return el;
+}
+
+// ---------- Settings: this browser ----------
+function pairedRow() {
+  if (!isServedOrigin() || !deviceToken()) return null;
+  const status = h('p', { class: 'settings-status', role: 'status', 'aria-live': 'polite' });
+  const forget = h('button', { class: 'btn', type: 'button' }, 'Forget');
+  const row = h('div', { class: 'setting-row is-wide share-row' },
+    h('span', { class: 'setting-label' }, 'This browser is paired'),
+    h('p', { class: 'setting-hint' }, 'It can save settings and import while Concept Explainer runs. Forget removes the key from this browser only.'),
+    h('div', { class: 'btn-row' }, forget), status);
+  forget.addEventListener('click', () => {
+    forgetDeviceToken();
+    status.textContent = 'Forgotten. Open the app again to pair this browser.';
+    forget.disabled = true;
+  });
+  return row;
+}
+
 // ---- settings.js ----
 // Settings: one view shared by the explainer pages, the kit and the hub.
 // Reading choices live in this browser (localStorage, in try/catch). Explainer
@@ -6520,8 +6694,10 @@ function withServe(context) {
       token = null;
     }
   }
-  if (!served || !token) return context;
-  return { ...context, serve: { ...(context.serve || {}), token } };
+  // A paired browser (the app launcher) keeps its device token instead.
+  const device = !token && served ? deviceToken() : null;
+  if (!served || !(token || device)) return context;
+  return { ...context, serve: { ...(context.serve || {}), token: token || device, device: Boolean(device) } };
 }
 
 // ---------- Quick theme: a small menu by the gear, and Shift+D ----------
@@ -6601,8 +6777,18 @@ function settingsView(registry, { context = {}, config = null, extra = [] } = {}
     h('div', { class: 'settings-body' },
       readingGroup(registry),
       defaultsSlot(context, config),
-      extra));
+      extra,
+      pairedGroup()));
   return { key: 'settings', title: 'Settings', nav: 'Settings', section, controller: null };
+}
+
+// Settings > This browser, only when the app launcher paired it.
+function pairedGroup() {
+  const row = pairedRow();
+  if (!row) return null;
+  return h('section', { class: 'panel settings-group', 'aria-labelledby': 'settings-device-title' },
+    h('div', { class: 'settings-legend' }, h('h2', { id: 'settings-device-title' }, 'This browser'), h('span', { class: 'eyebrow quiet' }, 'Paired by the app')),
+    row);
 }
 
 // ---- settings-defaults.js ----
@@ -6863,6 +7049,7 @@ function defaultsGroup(context, initialConfig) {
   const fields = Object.fromEntries(Object.keys(CONFIG_FIELDS).map((key) => [key, defaultsRow(key, saved[key])]));
   const current = () => ({ ...saved, ...Object.fromEntries(Object.keys(CONFIG_FIELDS).map((key) => [key, fields[key].control.read()])) });
   const submit = h('button', { class: 'btn primary', type: 'submit' }, serve ? 'Save' : 'Show the commands');
+  if (serve) needsServer(submit);
   const form = h('form', { class: 'settings-form', novalidate: true }, Object.values(fields).map((f) => f.el),
     h('p', { class: 'setting-hint' }, 'Chapters per type are set from the command line: ',
       h('code', null, `${CLI_NAME} config set chapters '{"repo":{"quiz":false}}'`)),
@@ -6991,7 +7178,8 @@ function pageSnapshot(style, styleText, cspTag) {
     const key = m.hasAttribute('name') ? 'name' : 'property';
     return `<meta ${key}="${escapeAttr(m.getAttribute(key))}" content="${escapeAttr(m.getAttribute('content'))}">`;
   });
-  const links = [...head.querySelectorAll('link[rel]')].map((l) => {
+  // Never the app manifest: a saved page is a plain file, not the app.
+  const links = [...head.querySelectorAll('link[rel]:not([rel="manifest"])')].map((l) => {
     const cross = l.hasAttribute('crossorigin') ? ' crossorigin' : '';
     return `<link rel="${escapeAttr(l.getAttribute('rel'))}" href="${escapeAttr(l.getAttribute('href'))}"${cross}>`;
   });
@@ -7052,7 +7240,10 @@ function serveApi(context, name) {
   return `/api/${name}`;
 }
 
+const UNPAIRED_TEXT = 'This browser is no longer paired. Open the app again to pair it; until then the page shows the commands.';
+
 function serveFetch(context, url, options = {}) {
+  if (PWA.offline) return Promise.reject(new Error(OFFLINE_TEXT));
   return fetch(url, { ...options, headers: { ...(options.headers || {}), 'x-concept-explainer-token': context.serve.token } })
     .then((response) => response.text().then((body) => {
       let json = null;
@@ -7060,6 +7251,13 @@ function serveFetch(context, url, options = {}) {
         json = body ? JSON.parse(body) : null;
       } catch (error) {
         json = null;
+      }
+      // A refused device token was revoked or went unused too long: drop it,
+      // and the page falls back to the copy-a-command view on reload.
+      if (response.status === 403 && context.serve.device) {
+        forgetDeviceToken();
+        window.setTimeout(() => window.location.reload(), RELOAD_DELAY_MS * 3);
+        throw new Error(UNPAIRED_TEXT);
       }
       if (!response.ok) throw new Error((json && (list(json.errors).join(' ') || json.error)) || `The server answered ${response.status}.`);
       return { json, body };
@@ -7092,6 +7290,7 @@ function hubShareGroup(context, getSelection) {
   const importStatus = h('p', { class: 'settings-status', role: 'status', 'aria-live': 'polite' });
   const exportOut = h('div', { class: 'settings-commands' });
   const exportButton = h('button', { class: 'btn', type: 'button' }, icon('download'), 'Export');
+  if (served) needsServer(exportButton);
   exportButton.addEventListener('click', () => {
     const { slugs, args, label, none } = getSelection();
     if (none) {
@@ -7135,7 +7334,8 @@ function fileSize(bytes) {
 // The drop zone with its hidden file input and "choose a file" button.
 function importDropZone() {
   const input = h('input', { class: 'sr-only', type: 'file', id: 'import-file', accept: '.json,application/json', tabindex: '-1', 'aria-hidden': 'true' });
-  const choose = h('button', { class: 'link drop-choose', type: 'button', onclick: () => input.click() }, 'or choose a file');
+  const choose = needsServer(h('button', { class: 'link drop-choose', type: 'button', onclick: () => input.click() }, 'or choose a file'));
+  needsServer(input);
   const picked = h('div', { class: 'drop-picked', hidden: true });
   const zone = h('div', { class: 'drop-zone', 'aria-describedby': 'import-file-hint' },
     icon('upload'), h('span', { class: 'drop-title' }, 'Drop a .explainers.json file'), choose, picked);
@@ -7179,7 +7379,7 @@ function importPickedRow(file, onRemove) {
 // What the dry run found, with the Import button; or what the import did.
 function importOutcome(out, json, { dryRun, apply }) {
   if (dryRun) {
-    const button = h('button', { class: 'btn primary', type: 'button' }, 'Import');
+    const button = needsServer(h('button', { class: 'btn primary', type: 'button' }, 'Import'));
     button.addEventListener('click', () => apply(button));
     fill(out, importSummary(json), h('div', { class: 'btn-row' }, button));
     return;
@@ -7244,7 +7444,7 @@ function importServed(context, status, out) {
     });
   }
   wireDropZone(drop, (file) => {
-    if (!file || busy) return;
+    if (!file || busy || PWA.offline) return;
     if (file.size > BUNDLE_MAX_BYTES) { status.textContent = `${file.name} is over ${BUNDLE_MAX_LABEL}. Bundles must be smaller.`; return; }
     file.text().then((body) => {
       pending = { name: file.name, text: body };
@@ -7582,6 +7782,7 @@ function kitSections(kinds, patterns) {
 }
 
 function bootGallery() {
+  if (deferBoot(bootGallery)) return;
   const context = readContext();
   applyLook(context);
   applyReading();
