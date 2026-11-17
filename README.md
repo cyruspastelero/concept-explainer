@@ -212,6 +212,16 @@ The hub is one HTML file that works offline from `file://`. The source of each e
 
 **`library serve`.** From `file://`, a page cannot write, so Settings shows your values and the `config set` command to copy. Run `library serve` and Settings saves directly, and Share can export and import without the terminal. It binds to 127.0.0.1 only, uses a fresh token per run and serves only pages and fonts, never your library's data.
 
+### An app on your Dock
+
+No Electron, no install of a browser engine. The library can open like an app:
+
+```sh
+concept-explainer install --launcher    # macOS app, Linux menu entry or Windows Start Menu shortcut
+```
+
+Clicking it starts the library server on `127.0.0.1:4747` (if it is not already running), pairs your browser and opens the hub. In Chrome or Edge you can then install it as an app, and Safari can add it to the Dock; it keeps working offline for reading. The server stops itself after 30 idle minutes, and `uninstall --launcher` removes exactly what install wrote. Every explainer is still one HTML file you can share. How it works: [`references/launcher.md`](references/launcher.md).
+
 ### Share
 
 Send one explainer, a topic or the whole library to someone else, who imports it into their own library.

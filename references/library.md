@@ -246,7 +246,7 @@ A page opened from `file://` cannot write files, so Settings there shows the cur
 
 - Binds to **127.0.0.1 only**, on a random port unless `--port` is given. Prints `http://127.0.0.1:<port>/index.html#token=<token>` and runs until Ctrl+C.
 - A fresh random **token** per run (48 hex characters) travels to the page in the URL fragment, so it never reaches a server log or a Referer header.
-- **Host** must be `127.0.0.1:<port>` or `localhost:<port>` on every request (blocks DNS rebinding).
+- **Host** must be `127.0.0.1:<port>` on every request (blocks DNS rebinding); `localhost:<port>` gets a 308 to `127.0.0.1`, so there is one origin. The default port is 4747 (`servePort`); the installable app, pairing and `launch` are in `references/launcher.md`.
 - **Files:** `GET` and `HEAD` only, and only these: `/` and `/index.html` (the hub), `/kit.html`, `/explainers/<slug>/` and `/explainers/<slug>/index.html`, and `/fonts/<name>.woff2` and `/fonts/OFL.txt`. Everything else is not found, with or without the token: `library.json`, `config.json`, every `explainer.json`, temp, backup and corrupt files, dotfiles and `.lock`. Symlinks that leave the library are refused. Responses carry `nosniff`, `no-store`, `no-referrer` and `DENY` framing headers.
 - **Bodies:** nothing past the cap is kept; the answer is 413 with `Connection: close`, and the server then discards at most 1 MB or 1 s more of the upload before dropping the connection, so the client can read the 413 (closing with unread data resets the socket, and on Windows that loses the answer). Aborted uploads are dropped without an answer.
 - **API:** every call needs the token in `X-Concept-Explainer-Token`; writes also need the Origin. `GET /api/config` needs it too, since `instructions` may be private.
@@ -271,7 +271,7 @@ Built pages are static files, so they do not carry the API paths. Use these defa
 
 How a page knows it is served, and how it saves:
 
-1. **Detect.** `location.protocol` is `http:`, `location.hostname` is `127.0.0.1` or `localhost`, and the hash starts with `token=` on first load. Read the token, keep it in `sessionStorage` (inside try/catch) so other pages from the same origin have it, then replace the hash with the normal route (`history.replaceState`). Without a token, behave as on `file://`.
+1. **Detect.** `location.protocol` is `http:`, `location.hostname` is `127.0.0.1`, and the hash starts with `token=` on first load. Read the token, keep it in `sessionStorage` (inside try/catch) so other pages from the same origin have it, then replace the hash with the normal route (`history.replaceState`). Without a token, behave as on `file://`.
 2. **Read.** `GET /api/config` for the live values (the embedded config can be older).
 3. **Save.** Send the changed keys only:
 
@@ -283,7 +283,7 @@ X-Concept-Explainer-Token: <token>
 { "audience": "expert", "chapters": { "pr": { "risks": false } } }
 ```
 
-The browser adds `Origin`, which must be `http://127.0.0.1:<port>` or `http://localhost:<port>`. The body is at most 64 KB, a JSON object of config keys, checked with the same rules as `config set`. Changes merge into the saved config.
+The browser adds `Origin`, which must be `http://127.0.0.1:<port>`. The body is at most 64 KB, a JSON object of config keys, checked with the same rules as `config set`. Changes merge into the saved config.
 
 | Status | Body | Meaning |
 |---|---|---|
