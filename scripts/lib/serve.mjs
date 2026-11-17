@@ -143,20 +143,45 @@ function readBody(req, max) {
       settled = true;
       done(value);
     };
-    req.on('data', (chunk) => {
+    const onData = (chunk) => {
       size += chunk.length;
       if (size > max) {
         req.pause();
+        req.removeListener('data', onData);
         finish(TOO_LARGE);
       } else {
         chunks.push(chunk);
       }
-    });
+    };
+    req.on('data', onData);
     req.on('end', () => finish(Buffer.concat(chunks).toString('utf8')));
     req.on('error', () => finish(ABORTED));
     req.on('aborted', () => finish(ABORTED));
     req.on('close', () => finish(req.complete ? Buffer.concat(chunks).toString('utf8') : ABORTED));
   });
+}
+
+// After a 413, discard a little more of the upload before closing. A socket
+// closed with unread data is reset, and on Windows the reset throws away the
+// 413 before the client reads it. Bounded, so an endless upload still ends.
+const DRAIN_MAX_BYTES = 1024 * 1024;
+const DRAIN_MS = 1000;
+
+function drainThenClose(req) {
+  let extra = 0;
+  const stop = () => {
+    clearTimeout(timer);
+    req.removeListener('data', onData);
+    req.destroy();
+  };
+  const onData = (chunk) => {
+    extra += chunk.length;
+    if (extra > DRAIN_MAX_BYTES) stop();
+  };
+  const timer = setTimeout(stop, DRAIN_MS);
+  req.on('data', onData);
+  req.once('end', stop);
+  req.resume();
 }
 
 const hasToken = (state, req) => sameToken(req.headers[TOKEN_HEADER], state.token);
@@ -179,7 +204,8 @@ async function writeBody(state, req, res, max) {
   if (raw === TOO_LARGE) {
     // Answer, then drop the connection instead of reading the rest.
     res.writeHead(413, { ...SAFE_HEADERS, connection: 'close', 'content-type': TYPES['.json'] });
-    res.end(JSON.stringify({ error: `body over ${max} bytes` }), () => req.destroy());
+    res.end(JSON.stringify({ error: `body over ${max} bytes` }));
+    drainThenClose(req);
     return null;
   }
   return raw;

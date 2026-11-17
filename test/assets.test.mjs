@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { join, relative } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import {
   ICO, ICON_STROKE, RASTERS, exportAllSvgs, exportIcons, exportLogos, icoEntries, icoFromPngs, pngSize,
 } from '../scripts/lib/assets.mjs';
@@ -17,7 +17,8 @@ function svgFiles(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) return svgFiles(path);
-    return entry.name.endsWith('.svg') ? [relative(ASSETS, path)] : [];
+    // Forward slashes, as the export names them, on every platform.
+    return entry.name.endsWith('.svg') ? [relative(ASSETS, path).split(sep).join('/')] : [];
   });
 }
 

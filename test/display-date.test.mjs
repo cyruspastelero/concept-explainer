@@ -10,9 +10,13 @@ const domPath = fileURLToPath(new URL('../template/js/dom.js', import.meta.url))
 const source = readFileSync(domPath, 'utf8');
 const helper = source.slice(source.indexOf('const DATE_ONLY'), source.indexOf('\n}\n', source.indexOf('function displayDate')) + 3);
 
-// Each case runs in its own process, since the time zone is fixed at start.
+// Each case runs in its own process. The reader's zone and locale are
+// injected into date formatting (the page leaves both to the browser), since
+// Node on Windows ignores TZ and LANG.
 function show(tz, value, options) {
-  const script = `${helper}\nprocess.stdout.write(displayDate(${JSON.stringify(value)}, ${JSON.stringify(options || {})}));`;
+  const shim = `const toDay = Date.prototype.toLocaleDateString;
+Date.prototype.toLocaleDateString = function (locale, opts) { return toDay.call(this, locale ?? 'en-US', { timeZone: ${JSON.stringify(tz)}, ...opts }); };`;
+  const script = `${shim}\n${helper}\nprocess.stdout.write(displayDate(${JSON.stringify(value)}, ${JSON.stringify(options || {})}));`;
   return execFileSync(process.execPath, ['-e', script], { env: { ...process.env, TZ: tz, LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8' } }).toString();
 }
 

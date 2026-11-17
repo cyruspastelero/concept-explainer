@@ -5,12 +5,12 @@ import { request } from 'node:http';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { startLibraryServer, TOKEN_HEADER } from '../scripts/lib/serve.mjs';
 import { publishExplainer } from '../scripts/lib/library.mjs';
 import { BUNDLE_FORMAT } from '../scripts/lib/bundle.mjs';
 
-const LIBRARY = fileURLToPath(new URL('../scripts/lib/library.mjs', import.meta.url));
+// A file:// URL, not a path: on Windows an import of "D:\\..." is refused.
+const LIBRARY = new URL('../scripts/lib/library.mjs', import.meta.url).href;
 const example = JSON.parse(readFileSync(new URL('../examples/concept-idempotency-keys.explainer.json', import.meta.url), 'utf8'));
 const taskflow = JSON.parse(readFileSync(new URL('../examples/taskflow.explainer.json', import.meta.url), 'utf8'));
 const pause = (ms) => new Promise((done) => { setTimeout(done, ms); });
@@ -21,9 +21,15 @@ async function holdLock(home, ms) {
     import { withLibraryLock } from ${JSON.stringify(LIBRARY)};
     const nap = new Int32Array(new SharedArrayBuffer(4));
     withLibraryLock(${JSON.stringify(home)}, () => { console.log('held'); Atomics.wait(nap, 0, 0, ${ms}); });`;
-  const child = spawn(process.execPath, ['--input-type=module', '-e', code], { stdio: ['ignore', 'pipe', 'inherit'] });
+  const child = spawn(process.execPath, ['--input-type=module', '-e', code], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let stderr = '';
+  child.stderr.on('data', (chunk) => { stderr += chunk; });
   const exited = new Promise((done) => child.on('exit', done));
-  await new Promise((done) => child.stdout.once('data', done));
+  // Fail, never hang, when the child dies before it holds the lock.
+  await new Promise((done, fail) => {
+    child.stdout.once('data', done);
+    child.once('exit', (status) => fail(new Error(`lock holder exited (${status}) before taking the lock: ${stderr}`)));
+  });
   return { exited };
 }
 

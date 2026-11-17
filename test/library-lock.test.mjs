@@ -4,10 +4,10 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { withLibraryLock } from '../scripts/lib/library.mjs';
 
-const LIBRARY = fileURLToPath(new URL('../scripts/lib/library.mjs', import.meta.url));
+// A file:// URL, not a path: on Windows an import of "D:\\..." is refused.
+const LIBRARY = new URL('../scripts/lib/library.mjs', import.meta.url).href;
 const freshHome = () => join(mkdtempSync(join(tmpdir(), 'rx-lock-')), 'home');
 
 // A child that takes the lock, logs enter, holds it a moment, logs exit.

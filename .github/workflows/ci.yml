@@ -46,9 +46,8 @@ jobs:
   # The unit tests on Windows: paths, junction links, explorer.exe opening and
   # the library lock behave differently there.
   windows:
-    # Non-blocking until the Windows fixes land (issue tracked on GitHub).
     runs-on: windows-latest
-    continue-on-error: true
+    # A guard, not a budget: the suite takes about a minute. A hang fails fast.
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0

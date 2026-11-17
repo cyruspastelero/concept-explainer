@@ -33,7 +33,11 @@ test('relinking renames the new link over the old one, never removing it first',
   };
   linkDir(two, target, { rename });
   assert.equal(realpathSync(target), two);
-  assert.deepEqual(seen, ['target present']);
+  // POSIX renames over the old link in one step. Windows cannot rename onto a
+  // folder link, so the old one moves aside first (target present, present),
+  // then the new one goes in (target missing for that one rename). Neither
+  // ever removes the old link before the new one is ready.
+  assert.deepEqual(seen, process.platform === 'win32' ? ['target present', 'target present', 'target missing'] : ['target present']);
   assert.deepEqual(readdirSync(join(root, 'skills')), ['concept-explainer']);
 });
 

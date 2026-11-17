@@ -1,4 +1,5 @@
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -96,7 +97,7 @@ test('code matches when only trailing whitespace and a final newline differ', ()
 
 test('the snippet command prints JSON to paste, and refuses secrets with a clear error', () => {
   const root = repo({ 'src/app.js': LINES, '.env': 'A=1\n' });
-  const bin = new URL('../bin/concept-explainer.mjs', import.meta.url).pathname;
+  const bin = fileURLToPath(new URL('../bin/concept-explainer.mjs', import.meta.url));
   const ok = spawnSync(process.execPath, [bin, 'snippet', root, 'src/app.js:2-6'], { encoding: 'utf8', env: { ...process.env, CONCEPT_EXPLAINER_HOME: join(root, 'home') } });
   assert.equal(ok.status, 0, ok.stderr);
   const printed = JSON.parse(ok.stdout);
