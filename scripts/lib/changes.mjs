@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { git } from './git.mjs';
 
 // Turns git history into draft "changes" entries. The agent must still fill
 // in `why` from PR descriptions / commit bodies, and map files to node ids.
@@ -10,13 +10,7 @@ const AGENT_TRAILERS = /^(Co-Authored-By|Generated-By|Assisted-By):.*\b(claude|c
 const CONVENTIONAL = /^(feat|fix|refactor|perf|docs|test|chore|ci|security|build|style)(\(.+?\))?!?:\s*/i;
 const PR_REF = /(?:#|!)(\d+)/;
 
-function git(repo, args) {
-  try {
-    return execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  } catch (error) {
-    throw new Error(`git ${args[0]} failed in ${repo}: ${error.stderr || error.message}`);
-  }
-}
+export { git, gitArgs } from './git.mjs';
 
 /**
  * @param {string} author

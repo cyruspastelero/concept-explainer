@@ -1,0 +1,96 @@
+/* ================================================================
+   Playful style: the original look (inspired by Duolingo's design
+   language; not affiliated). Same layout and components; only the
+   tokens, type and the pressable edge change. data-style="playful".
+   ================================================================ */
+:root[data-style="playful"] {
+  color-scheme: light;
+  --canvas: #ffffff; --surface: #ffffff; --line: #e5e5e5; --ink: #3c3c3c; --body: #4b4b4b;
+  --muted: #757575; --quiet: #afafaf; --faint: #afafaf;
+  --accent: #58cc02; --accent-fill: #3e8500; --accent-hover: #367400; --accent-edge: #2e6400; --accent-text: #3c7d00;
+  --on-accent: #ffffff; --good: #3c7d00; --bad: #cc3333; --good-wash: #d7ffb8; --bad-wash: #ffdfe0;
+  --heading: #042c60; --display: #58a700; --link: #1479b8;
+  --select: #1cb0f6; --select-wash: #ddf4ff; --nav-current-bg: #ddf4ff;
+  --hover-tint: rgb(0 0 0 / 0.04); --bar-glass: rgb(255 255 255 / 0.9);
+  --code-bg: #000437; --mark-bg: #d7ffb8; --hint-bg: #ffffff; --hint-ring: #e5e5e5; --hint-ink: #757575; --code-ring: 0 0 0 0 transparent; --code-ink: #e8ecff; --code-kw: #a5ed6e; --code-cm: #8a90c2; --code-st: #ffd66b;
+  --hair: 2px; --radius: 12px; --radius-sm: 8px;
+  --sans: "Nunito", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --body-weight: 500; --body-tracking: 0.02em; --heading-weight: 800; --tracking-label: 0.06em;
+  /* Pressable edge: a 2px border with a 4px bottom, drawn as unblurred rings. */
+  --ring: 0 0 0 2px var(--line), 0 2px 0 2px var(--line);
+  --ring-strong: 0 0 0 2px var(--faint), 0 2px 0 2px var(--faint);
+  --ring-ink: 0 0 0 2px var(--select), 0 2px 0 2px var(--select);
+  --ring-accent: 0 0 0 2px var(--select), 0 2px 0 2px var(--select);
+  --nav-current-ring: inset 0 0 0 2px var(--select);
+  --primary-ring: 0 0 0 2px var(--accent-edge), 0 2px 0 2px var(--accent-edge);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-style="playful"]:not([data-theme="light"]) {
+    color-scheme: dark;
+    --canvas: #131f24; --surface: #202f36; --line: #37464f; --ink: #f1f7fb; --body: #dce6ec;
+    --muted: #a7bac4; --quiet: #8fa3ad; --faint: #52656d;
+    --accent: #93d333; --accent-fill: #93d333; --accent-hover: #a5ed6e; --accent-edge: #79b933; --accent-text: #93d333;
+    --on-accent: #131f24; --good: #93d333; --bad: #ff7878; --good-wash: #2b4022; --bad-wash: #4a2a2e;
+    --heading: #f1f7fb; --display: #93d333; --link: #49c0f8;
+    --select: #49c0f8; --select-wash: #1a3a4a; --nav-current-bg: #1a3a4a;
+    --hover-tint: rgb(255 255 255 / 0.06); --bar-glass: rgb(19 31 36 / 0.88);
+    --code-bg: #0b1418; --mark-bg: #2b4022; --hint-bg: #202f36; --hint-ring: #37464f; --hint-ink: #a7bac4;
+  }
+}
+:root[data-style="playful"][data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #131f24; --surface: #202f36; --line: #37464f; --ink: #f1f7fb; --body: #dce6ec;
+  --muted: #a7bac4; --quiet: #8fa3ad; --faint: #52656d;
+  --accent: #93d333; --accent-fill: #93d333; --accent-hover: #a5ed6e; --accent-edge: #79b933; --accent-text: #93d333;
+  --on-accent: #131f24; --good: #93d333; --bad: #ff7878; --good-wash: #2b4022; --bad-wash: #4a2a2e;
+  --heading: #f1f7fb; --display: #93d333; --link: #49c0f8;
+  --select: #49c0f8; --select-wash: #1a3a4a; --nav-current-bg: #1a3a4a;
+  --hover-tint: rgb(255 255 255 / 0.06); --bar-glass: rgb(19 31 36 / 0.88);
+  --code-bg: #0b1418; --mark-bg: #2b4022; --hint-bg: #202f36; --hint-ring: #37464f; --hint-ink: #a7bac4;
+}
+:root[data-style="playful"] .map-col, :root[data-style="playful"] .layer-dot, :root[data-style="playful"] .kit-layer { --layer: var(--layer-fun); }
+
+/* Type: Nunito, heavy headings, labels in the body face. */
+:root[data-style="playful"] :is(.eyebrow, .panel-bar, .side-label, .step-count, .tag, .top-row, .glance-grid dt, .map-col-head, .map-legend, .detail-label, .er-row-head) {
+  font-family: var(--sans); font-weight: 800;
+}
+:root[data-style="playful"] :is(.view-head h1, .ov-head h1) { color: var(--display); font-weight: 900; letter-spacing: -0.02em; }
+:root[data-style="playful"] :is(h2, h3, .card-title, .next-title, .pager-title, .flow-pick-title, .result-title, .row-title, .prog-done, .glance-grid dd, .score b, .node-label, .entity-name, .side-repo b) {
+  font-weight: 800; letter-spacing: -0.01em;
+}
+:root[data-style="playful"] .links a { font-weight: 700; }
+:root[data-style="playful"] .link, :root[data-style="playful"] .panel-bar a { font-weight: 800; text-decoration: none; }
+:root[data-style="playful"] .tag { padding: 0 8px; }
+:root[data-style="playful"] .brand .name { font-family: var(--sans); font-weight: 900; font-size: 17px; letter-spacing: -0.01em; color: var(--accent-text); }
+
+/* Buttons: uppercase, heavy, pressable. The 4px bottom collapses on press. */
+:root[data-style="playful"] .btn { min-height: 46px; padding-inline: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; font-size: 14px; }
+:root[data-style="playful"] .btn.small { min-height: 36px; padding-inline: 14px; font-size: 13px; }
+:root[data-style="playful"] .btn.primary { font-weight: 800; }
+:root[data-style="playful"] :is(.btn, .option, .flow-pick, .pager-link, a.card, .facet, .node, .entity):not(:disabled):active {
+  translate: 0 2px; scale: none; box-shadow: 0 0 0 2px var(--line);
+}
+:root[data-style="playful"] .btn.primary:not(:disabled):active { box-shadow: 0 0 0 2px var(--accent-edge); }
+:root[data-style="playful"] .btn:disabled { box-shadow: 0 0 0 2px var(--line); }
+:root[data-style="playful"] .node { box-shadow: var(--ring), inset 3px 0 0 var(--layer); }
+:root[data-style="playful"] .seq-step.is-current .badge-num { fill: var(--on-accent); }
+:root[data-style="playful"] .step-dots button::before { height: 8px; inset-block-start: 6px; }
+:root[data-style="playful"] .meter { height: 12px; }
+:root[data-style="playful"] :focus-visible { outline-color: var(--select); }
+:root[data-style="playful"] .card:hover { translate: none; }
+
+/* The Playful swatch on the Style card in Settings, shown in both styles. */
+.style-preview.is-playful { background: #ffffff; box-shadow: inset 0 0 0 2px #e5e5e5; }
+.style-preview.is-playful i { height: 12px; border-radius: 6px; background: #1cb0f6; }
+.style-preview.is-playful i:first-child { height: 20px; background: #58cc02; box-shadow: 0 2px 0 0 #58a700; }
+
+/* Hints stay quiet until pointed at. */
+@media (hover: hover) { :root[data-style="playful"] .trunc-hint:hover { color: var(--select); box-shadow: inset 0 0 0 var(--hair) var(--select); } }
+:root[data-style="playful"] button.trunc-hint:focus-visible { color: var(--select); box-shadow: inset 0 0 0 var(--hair) var(--select); }
+/* Map boxes are narrow: Nunito at 800 needs a touch more room for long names. */
+:root[data-style="playful"] .node-label { font-size: 13px; font-weight: 700; letter-spacing: 0; }
+:root[data-style="playful"] .node .node-icon { width: 28px; height: 28px; }
+@media (pointer: coarse) {
+  :root[data-style="playful"] .btn.small { min-height: 44px; }
+}

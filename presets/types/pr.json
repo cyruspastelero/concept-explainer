@@ -1,0 +1,59 @@
+{
+  "id": "pr",
+  "type": "pr",
+  "name": "Pull or merge request",
+  "whenToUse": "One PR or MR: what it changes, why, which parts move, and what a reviewer must check.",
+  "chapters": [
+    "context",
+    "diff",
+    "map",
+    "flows",
+    "risks",
+    "rollout",
+    "quiz"
+  ],
+  "optionalChapters": [
+    "code"
+  ],
+  "codeWalkthrough": "Optional. Add when 5 to 40 lines carry the root mechanism; extract with concept-explainer snippet.",
+  "sourceKind": "pr",
+  "mustCover": [
+    "Why this change exists, from the PR description or linked issue",
+    "The 2 to 4 files a reviewer must read, and why",
+    "Which parts of the system move (node status on the map)",
+    "How a request flows after the change",
+    "What could break, and how it rolls out"
+  ],
+  "starter": {
+    "context": {
+      "problem": "TODO: the problem, in one or two sentences",
+      "goals": [
+        "TODO: what this must achieve"
+      ],
+      "nonGoals": [
+        "TODO: what this deliberately leaves out"
+      ]
+    },
+    "diff": [
+      {
+        "path": "TODO: run concept-explainer diff to fill this",
+        "status": "modified",
+        "summary": "TODO: what changed in this file and why"
+      }
+    ],
+    "risks": [
+      {
+        "risk": "TODO: what could go wrong",
+        "impact": "medium",
+        "mitigation": "TODO: how it is prevented or caught"
+      }
+    ],
+    "rollout": [
+      {
+        "label": "TODO: first step",
+        "done": false
+      }
+    ],
+    "quiz": []
+  }
+}

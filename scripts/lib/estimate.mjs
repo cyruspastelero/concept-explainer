@@ -3,15 +3,16 @@
 // JSON, rebuild a few times. Most re-sent context is served from the prompt
 // cache, which is why cache reads dominate the token count but not the bill.
 
-// USD per million tokens. Source: https://claude.com/pricing (checked 2026-10-25).
+// USD per million tokens. Source: https://claude.com/platform/api (checked 2026-11-18).
+// Never edit a price without checking that page, and move checkedAt with it.
 export const PRICING = {
-  checkedAt: '2026-10-25',
-  source: 'https://claude.com/pricing',
+  checkedAt: '2026-11-18',
+  source: 'https://claude.com/platform/api',
   models: {
-    'fable-5.1': { label: 'Fable 5.1', input: 10, output: 50, cacheRead: 0.25 },
+    'fable-5.2': { label: 'Fable 5.2', input: 8, output: 40, cacheRead: 0.2 },
     'opus-5.5': { label: 'Opus 5.5', input: 4, output: 20, cacheRead: 0.2 },
     'sonnet-5.5': { label: 'Sonnet 5.5', input: 2, output: 10, cacheRead: 0.1 },
-    // Haiku 5.5 is cheaper for prompts ≤100K tokens; small runs stay under it.
+    // Haiku 5.5 is cheaper for prompts up to 100K tokens; small runs stay under it.
     'haiku-5.5': {
       label: 'Haiku 5.5', input: 0.1, output: 0.5, cacheRead: 0.01,
       longContext: { above: 100000, input: 0.5, output: 2.5, cacheRead: 0.05 },
@@ -63,3 +64,5 @@ export function costTable(profiles = Object.keys(USAGE)) {
 export function formatUsd(value) {
   return value < 0.1 ? `$${value.toFixed(3)}` : `$${value.toFixed(2)}`;
 }
+
+export { estimateRun, formatEstimate, usageFor } from './estimate-types.mjs';

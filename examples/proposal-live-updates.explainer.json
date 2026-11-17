@@ -1,0 +1,169 @@
+{
+  "$schema": "../references/data-schema.md",
+  "schemaVersion": 2,
+  "meta": {
+    "type": "proposal",
+    "title": "Live task updates, explained",
+    "repo": "acme/taskflow",
+    "summary": "Today the task board asks the server for changes every 10 seconds. This proposal pushes changes to open boards with server sent events instead. Taskflow and this proposal are fictional.",
+    "source": { "kind": "doc", "ref": "docs/rfcs/0007-live-updates.md" },
+    "status": "accepted",
+    "tags": ["realtime", "api", "infra"],
+    "stack": ["Next.js 15", "Postgres", "Redis"],
+    "generatedAt": "2026-11-18",
+    "chapters": ["context", "options", "visuals", "map", "flows", "risks", "rollout", "quiz"]
+  },
+  "context": {
+    "problem": "Without push, a board learns about a teammate's change only on its next poll, up to 10 seconds later. Polling also makes most requests return nothing new.",
+    "goals": ["Changes show on open boards within one second", "Fewer requests than polling at today's team sizes", "Works through the corporate proxies our customers use"],
+    "nonGoals": ["Collaborative editing of one task by two people", "Offline sync on mobile"],
+    "background": "Board polls are 61 percent of API requests and 93 percent of them return no changes (October numbers from the RFC)."
+  },
+  "options": [
+    {
+      "title": "Keep polling, but slower",
+      "summary": "Poll every 30 seconds to cut load.",
+      "pros": ["No new infrastructure"],
+      "cons": ["Changes take even longer to show", "Still mostly empty requests"]
+    },
+    {
+      "title": "WebSockets",
+      "summary": "A two way socket per open board.",
+      "pros": ["Lowest latency", "The client could send edits on the same socket"],
+      "cons": ["Some customer proxies drop upgraded connections", "Needs sticky sessions on the load balancer"]
+    },
+    {
+      "title": "Server sent events",
+      "summary": "One long lived HTTP response per board that the server writes events to.",
+      "pros": ["Plain HTTP, so proxies treat it like a slow download", "The browser reconnects on its own and resumes from the last event id"],
+      "cons": ["One way only; edits still use normal requests", "Browsers cap open connections per host over HTTP/1.1"],
+      "chosen": true,
+      "why": "Boards only need to hear about changes, not send on the same channel, so one way is enough; WebSockets would buy two way traffic we do not need at the cost of proxy failures."
+    }
+  ],
+  "diagrams": [
+    {
+      "id": "options-grid",
+      "kind": "compare",
+      "title": "How the options score",
+      "caption": "Server sent events meet every goal except two way traffic, which boards do not need.",
+      "columns": ["Slower polling", "WebSockets", "Server sent events"],
+      "rows": [
+        { "label": "Shows changes within 1 s", "values": [false, true, true] },
+        { "label": "Survives customer proxies", "values": [true, "partial", true] },
+        { "label": "Fewer requests", "values": ["partial", true, true] },
+        { "label": "Two way on one channel", "values": [false, true, false] }
+      ]
+    },
+    {
+      "id": "effort-impact",
+      "kind": "quadrant",
+      "title": "Effort against impact",
+      "caption": "Server sent events give most of the gain of WebSockets for about half the work.",
+      "axes": { "x": "Effort", "y": "Impact" },
+      "points": [
+        { "label": "Slower polling", "x": 0.1, "y": 0.15 },
+        { "label": "WebSockets", "x": 0.8, "y": 0.9 },
+        { "label": "Server sent events", "x": 0.4, "y": 0.8 }
+      ]
+    },
+    {
+      "id": "what-moves",
+      "kind": "beforeAfter",
+      "title": "What moves",
+      "caption": "Boards stop asking and start listening, and writes publish one event each.",
+      "before": { "items": ["Each board polls every 10 seconds", "Most responses are empty", "A change shows up to 10 seconds late"] },
+      "after": { "items": ["Each board holds one event stream", { "label": "Writes publish to Redis", "detail": "The task service publishes after the database commit." }, "A change shows in under a second"] },
+      "notes": ["Edits still use the normal tasks API.", "Polling stays as the fallback when a stream cannot open."]
+    }
+  ],
+  "layers": [
+    { "id": "client", "label": "Client", "color": "blue" },
+    { "id": "edge", "label": "API", "color": "green" },
+    { "id": "domain", "label": "Domain", "color": "navy" },
+    { "id": "infra", "label": "Data", "color": "yellow" }
+  ],
+  "nodes": [
+    { "id": "board", "label": "Task board", "layer": "client", "kind": "ui", "summary": "Shows a team's tasks and listens for changes.", "status": "changed" },
+    { "id": "api", "label": "Tasks API", "layer": "edge", "kind": "api", "summary": "Handles edits, as today.", "status": "unchanged" },
+    { "id": "stream", "label": "Events endpoint", "layer": "edge", "kind": "api", "summary": "Holds one open response per board and writes events to it.", "status": "added" },
+    { "id": "service", "label": "Task service", "layer": "domain", "kind": "service", "summary": "Saves the change, then publishes an event.", "status": "changed" },
+    { "id": "db", "label": "Postgres", "layer": "infra", "kind": "db", "summary": "Source of truth for tasks.", "status": "unchanged" },
+    { "id": "bus", "label": "Redis pub/sub", "layer": "infra", "kind": "queue", "summary": "Fans one event out to every API instance with open streams.", "status": "added" }
+  ],
+  "edges": [
+    { "from": "board", "to": "api", "label": "edits" },
+    { "from": "board", "to": "stream", "label": "listens", "kind": "async" },
+    { "from": "api", "to": "service", "label": "saves" },
+    { "from": "service", "to": "db", "label": "writes", "kind": "data" },
+    { "from": "service", "to": "bus", "label": "publishes", "kind": "async" },
+    { "from": "bus", "to": "stream", "label": "delivers", "kind": "async" }
+  ],
+  "flows": [
+    {
+      "id": "see-change-before",
+      "title": "Seeing a teammate's change, today",
+      "trigger": "A teammate moves a task to Done",
+      "summary": "Your board finds out on its next poll.",
+      "variant": "before",
+      "pair": "see-change",
+      "steps": [
+        { "from": "api", "to": "service", "label": "Saves the move", "kind": "request", "detail": "The teammate's edit is saved as today." },
+        { "from": "service", "to": "db", "label": "Writes the task", "kind": "data", "detail": "The change is in Postgres now." },
+        { "from": "board", "to": "api", "label": "Polls after up to 10 s", "kind": "request", "detail": "Your board asks again on its timer, not because anything changed." },
+        { "from": "api", "to": "board", "label": "Returns the change", "kind": "response", "detail": "You see the move up to 10 seconds late." }
+      ]
+    },
+    {
+      "id": "see-change-after",
+      "title": "Seeing a teammate's change, proposed",
+      "trigger": "A teammate moves a task to Done",
+      "summary": "The change is pushed to your open board within a second.",
+      "variant": "after",
+      "pair": "see-change",
+      "steps": [
+        { "from": "api", "to": "service", "label": "Saves the move", "kind": "request", "detail": "Edits work exactly as today." },
+        { "from": "service", "to": "db", "label": "Writes the task", "kind": "data", "detail": "The commit finishes first." },
+        { "from": "service", "to": "bus", "label": "Publishes task.moved", "kind": "async", "detail": "One small event with the task id and new column.", "why": "Publishing after the commit means a board never hears about a change that rolled back; publishing before would show ghosts." },
+        { "from": "bus", "to": "stream", "label": "Delivers to every instance", "kind": "async", "detail": "Each API instance with open streams for that team gets it." },
+        { "from": "stream", "to": "board", "label": "Writes the event", "kind": "response", "detail": "Your board updates the card. Each event has an id, so a reconnect resumes where it left off." }
+      ]
+    }
+  ],
+  "risks": [
+    { "risk": "Browsers cap HTTP/1.1 connections per host, so many tabs starve", "impact": "medium", "mitigation": "Serve the stream over HTTP/2, where one connection carries many streams.", "owner": "Platform team" },
+    { "risk": "An event is lost while a board reconnects", "impact": "medium", "mitigation": "Boards send Last-Event-ID; the endpoint replays the last 5 minutes from Redis." },
+    { "risk": "Redis goes down", "impact": "low", "mitigation": "Boards fall back to polling every 10 seconds, which is today's behavior." }
+  ],
+  "rollout": [
+    { "label": "Add the events endpoint behind a flag", "done": false },
+    { "label": "Publish events from the task service", "done": false },
+    { "label": "Turn it on for internal teams for one week", "done": false },
+    { "label": "Turn it on for everyone, keep polling as fallback", "done": false }
+  ],
+  "quiz": [
+    {
+      "question": "A customer's proxy closes any response that stays open for 60 seconds. What does their board do?",
+      "options": ["Reconnects and resumes from the last event id", "Stops updating until the page reloads", "Falls back to WebSockets"],
+      "answer": 0,
+      "explain": "The browser's EventSource reconnects on its own and sends the last event id, so nothing is lost. Falling back to WebSockets is tempting, but that option was not chosen and nothing in the design switches to it."
+    },
+    {
+      "question": "Boards show a task as Done, then it flips back a second later. Which step is likely in the wrong order?",
+      "options": ["Publishing before the database commit", "The board polling too often", "Redis delivering to two instances"],
+      "answer": 0,
+      "explain": "If the event goes out before the commit and the commit fails, boards show a change that never happened. Delivering to two instances is by design and cannot flip a task back."
+    },
+    {
+      "question": "You need boards to also show who is viewing them. Which part changes?",
+      "options": ["The events endpoint and the bus, with a new event type", "Only the task board", "Postgres"],
+      "answer": 0,
+      "explain": "Presence is another event pushed to open boards, so it rides the same endpoint and bus. Changing only the board is tempting, but the board cannot learn about other viewers without the server telling it."
+    }
+  ],
+  "glossary": [
+    { "term": "Server sent events", "definition": "A browser API where the server keeps one HTTP response open and writes events to it." },
+    { "term": "Polling", "definition": "Asking the server for changes on a timer, whether or not anything changed." },
+    { "term": "Pub/sub", "definition": "Publishers send messages to a channel; every subscriber to that channel gets a copy." }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "id": "migration",
+  "type": "migration",
+  "name": "Migration or tech change",
+  "whenToUse": "An upgrade, re-platform or library swap: before and after, the options, and the steps to get there safely.",
+  "chapters": [
+    "context",
+    "options",
+    "map",
+    "flows",
+    "rollout",
+    "risks",
+    "quiz"
+  ],
+  "optionalChapters": [
+    "code"
+  ],
+  "codeWalkthrough": "Optional. Add when 5 to 40 lines carry the root mechanism; extract with concept-explainer snippet.",
+  "sourceKind": "doc",
+  "status": "proposed",
+  "mustCover": [
+    "Why move, and why now",
+    "The options considered and the one chosen",
+    "Before and after, as paired flows or a beforeAfter visual",
+    "The rollout steps and how to go back",
+    "Risks during the move"
+  ],
+  "starter": {
+    "context": {
+      "problem": "TODO: the problem, in one or two sentences",
+      "goals": [
+        "TODO: what this must achieve"
+      ],
+      "nonGoals": [
+        "TODO: what this deliberately leaves out"
+      ]
+    },
+    "options": [
+      {
+        "title": "TODO: stay as is",
+        "summary": "TODO: one sentence",
+        "pros": [
+          "TODO"
+        ],
+        "cons": [
+          "TODO"
+        ]
+      },
+      {
+        "title": "TODO: move to the new thing",
+        "summary": "TODO: one sentence",
+        "pros": [
+          "TODO"
+        ],
+        "cons": [
+          "TODO"
+        ]
+      }
+    ],
+    "rollout": [
+      {
+        "label": "TODO: first step",
+        "done": false
+      }
+    ],
+    "risks": [
+      {
+        "risk": "TODO: what could go wrong",
+        "impact": "medium",
+        "mitigation": "TODO: how it is prevented or caught"
+      }
+    ],
+    "quiz": []
+  }
+}

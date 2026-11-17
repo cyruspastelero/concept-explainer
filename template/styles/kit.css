@@ -1,0 +1,24 @@
+/* The design kit page (template/js/gallery.js). */
+
+/* ---------- Kit gallery ---------- */
+.kit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 132px), 1fr)); gap: 12px; }
+.kit-grid-wide { grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
+.kit-icon { display: grid; justify-items: center; gap: 10px; padding: 18px 12px 14px; text-align: center; }
+.kit-icon svg { width: 28px; height: 28px; color: var(--ink); }
+.kit-icon code, .kit-swatch code, .kit-pattern code { font-size: 12px; color: var(--muted); }
+.kit-swatch { display: grid; gap: 4px; padding: 14px; }
+.kit-swatch p { font-size: 13px; color: var(--muted); }
+.kit-chip { height: 44px; margin-block-end: 8px; border-radius: var(--radius-sm); box-shadow: inset 0 0 0 var(--hair) var(--line); }
+.kit-layer { display: grid; gap: 12px; padding: 16px; }
+.kit-stack { display: grid; gap: 20px; padding: var(--card-pad); }
+.kit-pattern { display: grid; gap: 8px; align-content: start; padding: 16px 20px; }
+.kit-pattern h3 { font-size: 17px; font-weight: 500; }
+.kit-pattern p { font-size: 15px; color: var(--body); }
+.kit-logo { display: grid; place-items: center; padding: 32px; }
+.kit-logo svg { width: 96px; height: 96px; }
+.kit-credit { font-size: 14px; color: var(--muted); max-width: 60ch; }
+.kit-section { display: grid; gap: var(--grid-gap); padding-block-start: 48px; }
+.kit-section > header { display: grid; gap: 8px; max-width: 46em; }
+.kit-section h2 { font-size: clamp(24px, 2.6vw, 30px); line-height: 1.1; letter-spacing: -0.045em; }
+.kit-section > header p { color: var(--body); }
+.kit-stack > .seg { justify-self: start; }

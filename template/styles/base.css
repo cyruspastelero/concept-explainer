@@ -1,0 +1,212 @@
+/* Concept Explainer: a dashboard in the Geist system. See references/design-system.md.
+   Greys from Geist, one orange accent, 6px radius, hairline rings, no blurred shadows, no gradients.
+   Orange means "where you are, what is done, the primary action". It never fills a large area. */
+:root {
+  color-scheme: light; --canvas: #fafafa; --surface: #ffffff; --line: #ebebeb; --ink: #171717; --body: #4d4d4d;
+  --muted: #666666; --quiet: #8f8f8f; --faint: #c9c9c9; --accent: #fc5e32; --accent-fill: #d2430e;
+  --accent-hover: #b83a0b; --accent-text: #c2410c; --good: #297a3a; --bad: #cb2a2f; --on-accent: #ffffff;
+  --ring: 0 0 0 1px var(--line); --ring-strong: 0 0 0 1px var(--faint); --ring-ink: 0 0 0 1px var(--ink);
+  --ring-accent: 0 0 0 1.5px var(--accent); --hover-tint: rgb(0 0 0 / 0.04);
+  --bar-glass: rgb(250 250 250 / 0.82); --radius: 6px;
+  --sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; --tracking-label: 0.071em;
+  --gutter: clamp(16px, 4vw, 48px); --content-max: 1160px; --view-top: clamp(28px, 4vw, 48px);
+  --title-gap: 32px; --card-pad: 24px; --grid-gap: 16px; --sticky-top: 80px; --heads-top: 68px;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  /* Skin tokens: the Playful style redefines these (end of file). */
+  --heading: var(--ink); --display: var(--ink); --link: var(--ink); --select: var(--accent);
+  --select-wash: var(--surface); --nav-current-bg: var(--canvas); --nav-current-ring: inset 0 0 0 1px var(--line);
+  --primary-ring: 0 0 0 0 transparent; --good-wash: var(--surface); --bad-wash: var(--surface); --hair: 1px;
+  --radius-sm: 4px; --page-zoom: 1; --body-weight: 400; --body-tracking: 0; --heading-weight: 450; --code-bg: var(--canvas);
+  --code-ring: inset 0 0 0 var(--hair) var(--line); --code-ink: var(--body); --code-kw: var(--ink);
+  --code-cm: var(--quiet); --code-st: var(--accent-text); --mark-bg: rgb(252 94 50 / 0.16); --hint-bg: var(--surface); --hint-ring: var(--line); --hint-ink: var(--muted);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --canvas: #111111; --surface: #1a1a1a; --line: #2c2c2c; --ink: #ededed; --body: #c4c4c4;
+    --muted: #a3a3a3; --quiet: #8c8c8c; --faint: #4d4d4d; --accent: #ff7043; --accent-fill: #c8410e;
+    --accent-hover: #b83a0b; --accent-text: #ff8a5c; --good: #62c073; --bad: #ff6166;
+    --ring-strong: 0 0 0 1px #5a5a5a; --hover-tint: rgb(255 255 255 / 0.06); --bar-glass: rgb(17 17 17 / 0.82);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #111111; --surface: #1a1a1a; --line: #2c2c2c; --ink: #ededed; --body: #c4c4c4;
+  --muted: #a3a3a3; --quiet: #8c8c8c; --faint: #4d4d4d; --accent: #ff7043; --accent-fill: #c8410e;
+  --accent-hover: #b83a0b; --accent-text: #ff8a5c; --good: #62c073; --bad: #ff6166;
+  --ring-strong: 0 0 0 1px #5a5a5a; --hover-tint: rgb(255 255 255 / 0.06); --bar-glass: rgb(17 17 17 / 0.82);
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: var(--canvas); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: var(--body-weight);
+  /* Text size Large scales the whole page; fixed-height panels divide by it. */
+  zoom: var(--page-zoom, 1);
+  letter-spacing: var(--body-tracking);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Long identifiers, paths and URLs wrap instead of stretching their box. */
+  overflow-wrap: break-word;
+}
+h1, h2, h3, h4, p, ol, ul, dl, dd, figure { margin: 0; }
+ol, ul { padding: 0; list-style: none; }
+h1, h2, h3, h4 { font-weight: var(--heading-weight); color: var(--heading); text-wrap: balance; overflow-wrap: anywhere; hyphens: auto; }
+p { text-wrap: pretty; }
+b, strong { font-weight: 550; color: var(--ink); }
+a { color: var(--link); text-decoration-thickness: from-font; text-underline-offset: 0.2em; }
+@media (hover: hover) { a:hover { text-decoration-color: var(--accent); } }
+code, pre, kbd, .mono { font-family: var(--mono); }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+:focus:not(:focus-visible) { outline: none; }
+[tabindex="-1"]:focus { outline: none; }
+::selection { background: rgb(252 94 50 / 0.2); }
+.skip {
+  position: absolute; inset-block-start: 8px; inset-inline-start: 8px; z-index: 40; padding: 12px 16px;
+  border-radius: var(--radius); background: var(--surface); color: var(--ink); box-shadow: var(--ring-strong); transform: translateY(-200%);
+}
+.skip:focus { transform: none; }
+.noscript, .fatal { max-width: 640px; margin: 64px auto; padding: 24px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--ring); color: var(--body); }
+.fatal h1 { margin-bottom: 8px; font-size: 20px; }
+
+/* Labels: mono, uppercase, wide tracking */
+.eyebrow, .panel-bar, .side-label, .step-count, .tag, .top-row, .glance-grid dt {
+  font-family: var(--mono); font-size: 12px; font-weight: 400; line-height: 1.5; letter-spacing: var(--tracking-label); text-transform: uppercase;
+}
+.eyebrow { color: var(--ink); overflow-wrap: anywhere; }
+.eyebrow.quiet { color: var(--muted); }
+.tag {
+  display: inline-block; max-width: 100%; padding: 0 6px; border-radius: var(--radius-sm); vertical-align: middle;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  background: var(--surface); box-shadow: inset 0 0 0 var(--hair) var(--line); font-size: 11px; line-height: 18px; color: var(--body);
+}
+.tag-new::before, .tag-key::before, .tag-agent::before, .tag-human::before {
+  content: ""; display: inline-block; width: 6px; height: 6px; margin-inline-end: 6px; vertical-align: 1px; border-radius: 1px; background: var(--accent);
+}
+.tag-agent::before, .tag-human::before { border-radius: 9999px; background: none; box-shadow: inset 0 0 0 var(--hair) var(--muted); }
+.tag-agent::before { background: var(--muted); }
+.stack .tag, .lib-stack .tag { max-width: min(100%, 32ch); }
+.chip {
+  display: inline-block; max-width: 100%; min-height: 28px; padding: 2px 10px; border-radius: var(--radius); line-height: 24px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;
+  background: var(--surface); box-shadow: var(--ring); font-size: 14px; color: var(--ink); text-decoration: none;
+}
+@media (hover: hover) { a.chip:hover { box-shadow: var(--ring-strong); } }
+.chip-file {
+  display: inline-block; max-width: 100%; padding: 2px 8px; border-radius: var(--radius-sm); background: var(--canvas); box-shadow: inset 0 0 0 var(--hair) var(--line);
+  font-family: var(--mono); font-size: 12.5px; line-height: 20px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;
+}
+.link { padding: 0; border: 0; background: none; color: var(--link); text-align: start; text-decoration: underline; text-decoration-color: var(--faint); text-underline-offset: 3px; }
+@media (hover: hover) { .link:hover { text-decoration-color: var(--accent); } }
+.empty { padding: 24px; border-radius: var(--radius); box-shadow: inset 0 0 0 var(--hair) var(--line); color: var(--muted); text-align: center; }
+
+/* ---------- Buttons: primary (orange), secondary (hairline), text links ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px;
+  border: 0; border-radius: var(--radius); background: var(--surface); color: var(--ink); box-shadow: var(--ring);
+  font: inherit; font-size: 15px; font-weight: 500; line-height: 1.2; text-decoration: none; white-space: nowrap;
+  transition-property: background-color, box-shadow, color, scale; transition-duration: 150ms; transition-timing-function: var(--ease);
+}
+.btn.primary { background: var(--accent-fill); color: var(--on-accent); box-shadow: var(--primary-ring); font-weight: 550; }
+.btn.small { min-height: 36px; padding: 0 12px; font-size: 14px; }
+.btn:disabled { background: var(--surface); color: var(--faint); box-shadow: var(--ring); cursor: default; }
+@media (hover: hover) {
+  .btn:not(:disabled):hover { box-shadow: var(--ring-strong); }
+  .btn.primary:not(:disabled):hover { background: var(--accent-hover); box-shadow: var(--primary-ring); }
+}
+.btn:not(:disabled):active { scale: 0.97; }
+.btn[data-state="done"] { box-shadow: var(--ring-ink); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+/* ---------- Panels ---------- */
+.panel { background: var(--surface); border-radius: var(--radius); box-shadow: var(--ring); }
+.panel-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px;
+  box-shadow: inset 0 -1px 0 var(--line); color: var(--muted);
+}
+.panel-bar h2 { font: inherit; color: inherit; }
+.panel-bar a { color: var(--ink); text-transform: none; letter-spacing: 0; font-family: var(--sans); font-size: 14px; }
+.why { display: grid; gap: 2px; padding: 2px 0 2px 14px; box-shadow: inset 2px 0 0 var(--line); color: var(--body); }
+.why .eyebrow { font-size: 11px; }
+.why-risk { box-shadow: inset 2px 0 0 var(--faint); }
+
+
+/* ---------- Motion (Web Animations run from dom.js; these are CSS-only touches) ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .view:not([hidden]) .view-head, .view:not([hidden]) .ov-head { animation: rise-in 280ms var(--ease) both; }
+}
+@keyframes rise-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Long words ----------
+   Flex and grid items refuse to shrink below their longest word, so text
+   holders in rows must opt in to breaking anywhere and to a 100% cap. */
+.link, .option, .change-top > *, .step-top > *, .step-route > *, .route-part,
+.rel li > *, .er-name > *, .entity-name, .entity-key > *, .node-label, .glossary dt, .glossary dd, .key-badge + *,
+.flow-pick-title, .card-title, .row-title, .flow-trigger > span, .tree .note, .change-top, .side-repo b, .pager-title, .map-col-head, .next-title {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.chip-file { overflow-wrap: normal; }
+.er-detail-head h3, .code-head > *, .entity-head > *, .step-route, .view-head h1, .ov-head h1 { min-width: 0; overflow-wrap: anywhere; }
+
+
+/* Single-column grids get an explicit shrinkable track: an implicit "auto" track grows to its longest path. */
+.view-body, .map-shell, .flow-player, .timeline, .change-card, .quiz, .question, .glossary-wrap, .runbook, .run-item,
+.detail-main, .detail-side, .er-detail-head, .er-rels, .kit-stack, .ov-head, .why, .feedback, .step-code, .flow-meta, .rel, .files, .options { grid-template-columns: minmax(0, 1fr); }
+
+/* ---------- Long names: the "?" hint and its tooltip (truncatable in dom.js) ---------- */
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.truncatable.is-truncated { position: relative; padding-inline-end: 22px; }
+.trunc-hint {
+  position: absolute; inset-inline-end: 2px; inset-block-end: max(1px, calc((1lh - 16px) / 2));
+  display: inline-grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 9999px;
+  background: var(--hint-bg); box-shadow: inset 0 0 0 var(--hair) var(--hint-ring); color: var(--hint-ink);
+  font: 500 10px/1 var(--mono); letter-spacing: 0; text-transform: none; cursor: help;
+}
+.trunc-hint::before { content: ""; position: absolute; inset: -4px; }
+@media (hover: hover) { .trunc-hint:hover { color: var(--ink); box-shadow: inset 0 0 0 var(--hair) var(--faint); } }
+button.trunc-hint:focus-visible { outline-offset: 1px; }
+.trunc-tip {
+  position: fixed; inset: auto; margin: 0; z-index: 60; max-width: min(420px, 90vw); padding: 4px 8px; border: 0; border-radius: var(--radius-sm);
+  background: var(--ink); color: var(--canvas); font: 500 12.5px/1.45 var(--sans); letter-spacing: 0; text-transform: none;
+  overflow-wrap: anywhere; white-space: normal; pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) { .trunc-tip:not([hidden]) { animation: fade-in 120ms var(--ease); } }
+.chip-text { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* A shortened long token: the short form (not copied), the full token for
+   screen readers and copy, and an inline hint at text size. */
+.token-visible { user-select: none; -webkit-user-select: none; }
+.token-short .trunc-hint {
+  position: relative; inset: auto; display: inline-grid; width: min(16px, 1.1em); height: min(16px, 1.1em);
+  margin-inline: 0.2em 0.05em; vertical-align: -0.15em; font-size: max(9px, 0.62em); line-height: 1;
+}
+.token-short .trunc-hint::before { inset: -4px 0; }
+.truncatable.is-truncated > .token-short .trunc-hint { display: none; }
+/* Single-line holders keep a shortened token on one line; their own ellipsis does the rest. */
+:is(.facet-text, .tag, .chip-text, .nav-label, .node-tech, .map-col-name, .result-group-title, .side-stamp, .name) .token-short,
+:is(.facet-text, .tag, .chip-text, .nav-label, .node-tech, .map-col-name, .result-group-title, .side-stamp, .name) .token-visible { white-space: nowrap; }
+/* There the hint sits in space reserved at the end of the token, so it can never wrap to its own line. */
+:is(.facet-text, .tag, .chip-text, .nav-label, .node-tech, .map-col-name, .result-group-title, .side-stamp, .name) .token-short { position: relative; padding-inline-end: calc(min(16px, 1.1em) + 0.3em); }
+:is(.facet-text, .tag, .chip-text, .nav-label, .node-tech, .map-col-name, .result-group-title, .side-stamp, .name) .token-short .trunc-hint {
+  position: absolute; inset-inline-end: 0; inset-block-start: 50%; margin: 0; translate: 0 -50%;
+}
+/* Chrome still breaks at <wbr> under nowrap; single-line holders drop the break points. */
+:is(.facet-text, .tag, .chip-text, .nav-label, .node-tech, .map-col-name, .result-group-title, .side-stamp, .name) wbr { display: none; }
+.credit-playful { display: none; }
+:root[data-style="playful"] .credit-clean { display: none; }
+:root[data-style="playful"] .credit-playful { display: inline; }

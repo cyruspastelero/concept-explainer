@@ -1,0 +1,50 @@
+{
+  "id": "change",
+  "type": "change",
+  "name": "Single change or commit range",
+  "whenToUse": "One commit or a short range: what moved and why, without the review checklist of a PR.",
+  "chapters": [
+    "context",
+    "diff",
+    "flows",
+    "risks",
+    "quiz"
+  ],
+  "optionalChapters": [
+    "code"
+  ],
+  "codeWalkthrough": "Optional. Add when 5 to 40 lines carry the root mechanism; extract with concept-explainer snippet.",
+  "sourceKind": "commit",
+  "mustCover": [
+    "Why this change was made, from the commit message",
+    "Which files and parts changed",
+    "What behaves differently now",
+    "What could break"
+  ],
+  "starter": {
+    "context": {
+      "problem": "TODO: the problem, in one or two sentences",
+      "goals": [
+        "TODO: what this must achieve"
+      ],
+      "nonGoals": [
+        "TODO: what this deliberately leaves out"
+      ]
+    },
+    "diff": [
+      {
+        "path": "TODO: run concept-explainer diff to fill this",
+        "status": "modified",
+        "summary": "TODO: what changed in this file and why"
+      }
+    ],
+    "risks": [
+      {
+        "risk": "TODO: what could go wrong",
+        "impact": "medium",
+        "mitigation": "TODO: how it is prevented or caught"
+      }
+    ],
+    "quiz": []
+  }
+}

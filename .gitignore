@@ -3,8 +3,13 @@ node_modules/
 *.log
 /explainer.json
 /gallery.html
-/repo-explainer-assets/
+/concept-explainer-assets/
 /.playwright-mcp/
 coverage/
 !test/fixtures/**/node_modules/
 /examples/.stress.html
+
+# Secrets never belong in the repo.
+.env
+.env.*
+!.env.example

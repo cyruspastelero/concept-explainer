@@ -15,15 +15,53 @@ jobs:
       matrix:
         node: [18, 20, 22]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ matrix.node }}
       - run: git config --global user.email ci@example.com && git config --global user.name CI
+      - name: Keep the runner's real home untouched by any command
+        run: echo "CONCEPT_EXPLAINER_HOME=$RUNNER_TEMP/concept-explainer-home" >> "$GITHUB_ENV"
       - run: npm run check
-      - name: Example stays valid under --strict
-        run: node bin/repo-explainer.mjs validate examples/taskflow.explainer.json --strict
+      - name: Every example stays valid under --strict
+        run: |
+          for file in examples/*.explainer.json; do
+            node bin/concept-explainer.mjs validate "$file" --strict
+          done
+      - name: The old repo-explainer alias still runs
+        run: node bin/repo-explainer.mjs presets
       - name: Built files are up to date
-        run: git diff --exit-code -- examples/
+        # All four example pages and the gallery are committed; a rebuild must
+        # change none of them and add no file.
+        run: |
+          for page in taskflow pr-cursor-paging proposal-live-updates concept-idempotency-keys gallery; do
+            test -f "examples/$page.html" || { echo "examples/$page.html is missing"; exit 1; }
+          done
+          git status --porcelain -- examples/
+          test -z "$(git status --porcelain -- examples/)"
+
+  # The unit tests on Windows: paths, junction links, explorer.exe opening and
+  # the library lock behave differently there.
+  windows:
+    # Non-blocking until the Windows fixes land (issue tracked on GitHub).
+    runs-on: windows-latest
+    continue-on-error: true
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: git config --global user.email ci@example.com && git config --global user.name CI
+      - name: Keep the runner's real home untouched by any command
+        shell: bash
+        run: echo "CONCEPT_EXPLAINER_HOME=$RUNNER_TEMP/concept-explainer-home" >> "$GITHUB_ENV"
+      - name: Unit tests
+        shell: bash
+        run: node --test test/*.test.mjs

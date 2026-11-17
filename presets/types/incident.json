@@ -1,0 +1,57 @@
+{
+  "id": "incident",
+  "type": "incident",
+  "name": "Incident or post-mortem",
+  "whenToUse": "Something broke: the timeline from the record, what failed and why, and what changes so it does not happen again.",
+  "chapters": [
+    "context",
+    "timeline",
+    "flows",
+    "risks",
+    "rollout",
+    "quiz"
+  ],
+  "optionalChapters": [
+    "code"
+  ],
+  "codeWalkthrough": "Optional. Only when existing code carries the root of the problem; cite it with concept-explainer snippet.",
+  "sourceKind": "notes",
+  "mustCover": [
+    "The timeline, with times taken from the record only",
+    "How the failure flowed through the system",
+    "The root cause and the contributing causes",
+    "The follow-up actions and their owners"
+  ],
+  "starter": {
+    "context": {
+      "problem": "TODO: the problem, in one or two sentences",
+      "goals": [
+        "TODO: what this must achieve"
+      ],
+      "nonGoals": [
+        "TODO: what this deliberately leaves out"
+      ]
+    },
+    "timeline": [
+      {
+        "at": "TODO: time from the record",
+        "label": "TODO: what happened",
+        "kind": "detect"
+      }
+    ],
+    "risks": [
+      {
+        "risk": "TODO: what could go wrong",
+        "impact": "medium",
+        "mitigation": "TODO: how it is prevented or caught"
+      }
+    ],
+    "rollout": [
+      {
+        "label": "TODO: first step",
+        "done": false
+      }
+    ],
+    "quiz": []
+  }
+}

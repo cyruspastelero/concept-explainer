@@ -1,0 +1,6 @@
+# Keep text files LF everywhere so built pages, SVG assets and tests match on Windows checkouts.
+* text=auto eol=lf
+*.png binary
+*.gif binary
+*.ico binary
+*.woff2 binary

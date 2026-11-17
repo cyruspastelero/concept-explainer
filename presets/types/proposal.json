@@ -1,0 +1,75 @@
+{
+  "id": "proposal",
+  "type": "proposal",
+  "name": "Proposal, RFC or design doc",
+  "whenToUse": "An idea not built yet: the problem, the options weighed, the chosen design and how it would roll out.",
+  "chapters": [
+    "context",
+    "options",
+    "map",
+    "flows",
+    "risks",
+    "rollout",
+    "quiz"
+  ],
+  "optionalChapters": [
+    "code"
+  ],
+  "codeWalkthrough": "Optional. Only when existing code carries the root of the problem; cite it with concept-explainer snippet.",
+  "sourceKind": "doc",
+  "status": "draft",
+  "mustCover": [
+    "The problem and the goals, in the author's words",
+    "Every option considered, with pros and cons",
+    "Which option is chosen, and only if the decision is made",
+    "What the system looks like after (mark proposed parts as added)",
+    "Risks and the rollout plan"
+  ],
+  "starter": {
+    "context": {
+      "problem": "TODO: the problem, in one or two sentences",
+      "goals": [
+        "TODO: what this must achieve"
+      ],
+      "nonGoals": [
+        "TODO: what this deliberately leaves out"
+      ]
+    },
+    "options": [
+      {
+        "title": "TODO: option A",
+        "summary": "TODO: one sentence",
+        "pros": [
+          "TODO"
+        ],
+        "cons": [
+          "TODO"
+        ]
+      },
+      {
+        "title": "TODO: option B",
+        "summary": "TODO: one sentence",
+        "pros": [
+          "TODO"
+        ],
+        "cons": [
+          "TODO"
+        ]
+      }
+    ],
+    "risks": [
+      {
+        "risk": "TODO: what could go wrong",
+        "impact": "medium",
+        "mitigation": "TODO: how it is prevented or caught"
+      }
+    ],
+    "rollout": [
+      {
+        "label": "TODO: first step",
+        "done": false
+      }
+    ],
+    "quiz": []
+  }
+}

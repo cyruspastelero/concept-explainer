@@ -1,62 +1,37 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  AUTHOR_TYPES, CHANGE_KINDS, CHAPTER_KEYS, DASH, EDGE_KINDS, LAYER_COLORS, LIMITS, MARKUP, NODE_KINDS, NON_PROSE_KEYS, PLACEHOLDER, STEP_KINDS,
+  AUTHOR_TYPES, CHANGE_KINDS, CHAPTER_KEYS, DASH, EDGE_KINDS, LAYER_COLORS, LIMITS, MARKUP, NODE_KINDS, NON_PROSE_KEYS, PLACEHOLDER, STEP_KINDS, TYPE_RULES,
 } from './schema.mjs';
+import {
+  arr, checkEnum, checkUniqueIds, collector, isObject, isText, requireText, sentences, words,
+} from './validate-util.mjs';
+import { checkV2, typeOf } from './validate-v2.mjs';
+import { checkWalkthroughSources, checkWalkthroughs } from './validate-code.mjs';
 
 /**
  * @typedef {{ errors: string[], warnings: string[] }} ValidationResult
  */
 
-const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
-const isText = (value) => typeof value === 'string' && value.trim().length > 0;
-const arr = (value) => (Array.isArray(value) ? value : []);
-
-function collector() {
-  const errors = [];
-  const warnings = [];
-  return {
-    error: (path, message) => errors.push(`${path}: ${message}`),
-    warn: (path, message) => warnings.push(`${path}: ${message}`),
-    result: () => ({ errors, warnings }),
-  };
-}
-
-function requireText(report, path, value) {
-  if (!isText(value)) report.error(path, 'must be a non-empty string');
-}
-
-function checkEnum(report, path, value, allowed) {
-  if (value !== undefined && !allowed.includes(value)) {
-    report.warn(path, `"${value}" is not one of ${allowed.join(", ")}. It will render with a default style`);
-  }
-}
-
-function checkUniqueIds(report, path, items) {
-  const seen = new Set();
-  items.forEach((item, i) => {
-    requireText(report, `${path}[${i}].id`, item && item.id);
-    if (item && seen.has(item.id)) report.error(`${path}[${i}].id`, `duplicate id "${item.id}"`);
-    if (item) seen.add(item.id);
-  });
-  return seen;
-}
-
 function checkMeta(report, meta) {
   if (!isObject(meta)) return report.error('meta', 'is required');
   requireText(report, 'meta.title', meta.title);
   requireText(report, 'meta.summary', meta.summary);
-  arr(meta.chapters).forEach((key, i) => {
+  arr(meta.chapters).forEach((key, i, all) => {
     if (!CHAPTER_KEYS.includes(key)) report.error(`meta.chapters[${i}]`, `unknown chapter "${key}" (use ${CHAPTER_KEYS.join(', ')})`);
+    else if (all.indexOf(key) !== i) report.error(`meta.chapters[${i}]`, `"${key}" is listed twice (each chapter appears once)`);
   });
   return undefined;
 }
 
-function checkGraph(report, data) {
+// The map is required for repos; other types may leave it out, but a map
+// that is there must be whole.
+function checkGraph(report, data, type) {
   const layers = arr(data.layers);
   const nodes = arr(data.nodes);
-  if (!layers.length) report.error('layers', 'needs at least one layer');
-  if (!nodes.length) report.error('nodes', 'needs at least one node');
+  const needsMap = type === 'repo' || layers.length > 0 || nodes.length > 0;
+  if (needsMap && !layers.length) report.error('layers', 'needs at least one layer');
+  if (needsMap && !nodes.length) report.error('nodes', 'needs at least one node');
   const layerIds = checkUniqueIds(report, 'layers', layers);
   layers.forEach((layer, i) => {
     requireText(report, `layers[${i}].label`, layer.label);
@@ -67,7 +42,7 @@ function checkGraph(report, data) {
     requireText(report, `nodes[${i}].label`, node.label);
     if (!layerIds.has(node.layer)) report.error(`nodes[${i}].layer`, `"${node.layer}" is not a layer id`);
     checkEnum(report, `nodes[${i}].kind`, node.kind, NODE_KINDS);
-    if (!arr(node.files).length && node.kind !== 'user') report.warn(`nodes[${i}].files`, `"${node.id}" cites no files, so readers cannot find it in the code`);
+    if (TYPE_RULES[type].citesCode && !arr(node.files).length && node.kind !== 'user') report.warn(`nodes[${i}].files`, `"${node.id}" cites no files, so readers cannot find it in the code`);
   });
   layers.forEach((layer, i) => {
     if (!nodes.some((node) => node.layer === layer.id)) report.warn(`layers[${i}]`, `layer "${layer.id}" has no nodes`);
@@ -80,8 +55,8 @@ function checkGraph(report, data) {
   return nodeIds;
 }
 
-function checkFlows(report, flows, nodeIds) {
-  if (!flows.length) report.warn('flows', 'no end-to-end flow traced. This is the most useful chapter');
+function checkFlows(report, flows, nodeIds, type) {
+  if (!flows.length && type === 'repo') report.warn('flows', 'no end-to-end flow traced. This is the most useful chapter');
   checkUniqueIds(report, 'flows', flows);
   flows.forEach((flow, i) => {
     requireText(report, `flows[${i}].title`, flow.title);
@@ -93,7 +68,7 @@ function checkFlows(report, flows, nodeIds) {
       if (!nodeIds.has(step.from)) report.error(`${path}.from`, `"${step.from}" is not a node id`);
       if (!nodeIds.has(step.to)) report.error(`${path}.to`, `"${step.to}" is not a node id`);
       checkEnum(report, `${path}.kind`, step.kind, STEP_KINDS);
-      if (!isText(step.file)) report.warn(`${path}.file`, 'no file cited for this step');
+      if (TYPE_RULES[type].citesCode && !isText(step.file)) report.warn(`${path}.file`, 'no file cited for this step');
     });
   });
 }
@@ -105,7 +80,6 @@ function checkChanges(report, changes, nodeIds) {
     if (Number.isNaN(Date.parse(change.date))) report.error(`${path}.date`, 'must be an ISO date');
     checkEnum(report, `${path}.authorType`, change.authorType, AUTHOR_TYPES);
     checkEnum(report, `${path}.kind`, change.kind, CHANGE_KINDS);
-    if (change.url !== undefined && !/^https?:\/\//i.test(String(change.url))) report.error(`${path}.url`, 'must start with http:// or https://');
     if (!isText(change.why)) report.warn(`${path}.why`, 'missing the reason. The "why" is the point of this chapter');
     arr(change.nodes).forEach((id, j) => {
       if (!nodeIds.has(id)) report.error(`${path}.nodes[${j}]`, `"${id}" is not a node id`);
@@ -136,20 +110,24 @@ function citedFiles(data) {
   return [
     ...arr(data.nodes).flatMap((n) => arr(n.files)),
     ...arr(data.flows).flatMap((f) => arr(f.steps).map((st) => st.file)),
-    ...arr(data.concepts).map((c) => c.file),
+    ...arr(data.concepts).map((c) => c && c.file),
     ...arr(data.tree).map((t) => t.path),
+    // A removed file is gone at the head, so it is not looked for.
+    ...arr(data.diff).filter((d) => isObject(d) && d.status !== 'removed').map((d) => d.path),
   ].filter(isText);
 }
 
 function checkFilesExist(report, data, repoRoot) {
+  const type = typeOf(data);
+  if (!TYPE_RULES[type].citesCode) {
+    report.warn('files', `--repo is ignored for a ${type} explainer, which does not cite code`);
+    return;
+  }
   const missing = [...new Set(citedFiles(data))]
     .map((file) => file.replace(/[:#]L?\d+(-L?\d+)?$/, '').replace(/\/$/, ''))
     .filter((file) => !existsSync(resolve(repoRoot, file)));
   missing.forEach((file) => report.error('files', `cited path "${file}" does not exist in ${repoRoot}`));
 }
-
-const words = (value) => (isText(value) ? value.trim().split(/\s+/).length : 0);
-const sentences = (value) => (isText(value) ? (value.match(/[.!?](\s|$)/g) || []).length : 0);
 
 function checkLessonShape(report, data) {
   if (arr(data.layers).length > LIMITS.layers) report.warn('layers', `${arr(data.layers).length} layers. Group into ${LIMITS.layers} or fewer`);
@@ -196,6 +174,28 @@ function checkNoMarkup(report, data) {
   walk(data, '', '');
 }
 
+// Characters that are invisible, reorder text or drive a terminal: C0 and C1
+// controls, bidi overrides and isolates, zero-width marks. Newline and tab are
+// fine in prose and code; identifiers, paths and commands get none at all.
+const HIDDEN = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/;
+const HIDDEN_OR_BREAK = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/;
+const MULTILINE_KEYS = new Set(['code']);
+
+function checkHiddenCharacters(report, data) {
+  const walk = (value, path, key) => {
+    if (typeof value === 'string') {
+      const pattern = NON_PROSE_KEYS.has(key) && !MULTILINE_KEYS.has(key) ? HIDDEN_OR_BREAK : HIDDEN;
+      const hit = value.match(pattern);
+      if (hit) {
+        const code = hit[0].codePointAt(0).toString(16).toUpperCase().padStart(4, '0');
+        report.error(path, `contains a control or invisible character (U+${code}). Remove it; text must read the same everywhere`);
+      }
+    } else if (Array.isArray(value)) value.forEach((v, i) => walk(v, `${path}[${i}]`, key));
+    else if (isObject(value)) Object.entries(value).forEach(([k, v]) => walk(v, path ? `${path}.${k}` : k, k));
+  };
+  walk(data, '', '');
+}
+
 function checkPlaceholders(report, data) {
   const hits = [];
   const walk = (value, path) => {
@@ -211,6 +211,7 @@ function checkPlaceholders(report, data) {
  * Validate an explainer data object.
  * @param {unknown} data
  * @param {{ repoRoot?: string }} [options] when repoRoot is given, every cited file must exist there
+ *   (only for types that cite code: repo, pr, change, migration)
  * @returns {ValidationResult}
  */
 export function validateExplainer(data, options = {}) {
@@ -219,15 +220,22 @@ export function validateExplainer(data, options = {}) {
     report.error('root', 'explainer data must be a JSON object');
     return report.result();
   }
+  const type = typeOf(data);
   checkMeta(report, data.meta);
-  const nodeIds = checkGraph(report, data);
-  checkFlows(report, arr(data.flows), nodeIds);
+  const nodeIds = checkGraph(report, data, type);
+  checkFlows(report, arr(data.flows), nodeIds, type);
   checkChanges(report, arr(data.changes), nodeIds);
   checkLessons(report, data);
+  checkV2(report, data, nodeIds);
+  checkWalkthroughs(report, data, nodeIds, type);
   checkLessonShape(report, data);
   checkNoMarkup(report, data);
+  checkHiddenCharacters(report, data);
   checkProseStyle(report, data);
   checkPlaceholders(report, data);
-  if (options.repoRoot) checkFilesExist(report, data, options.repoRoot);
+  if (options.repoRoot) {
+    checkFilesExist(report, data, options.repoRoot);
+    checkWalkthroughSources(report, data, options.repoRoot);
+  }
   return report.result();
 }

@@ -16,7 +16,7 @@ test('frontmatter has name and description, each on one line', () => {
     const at = line.indexOf(': ');
     return [line.slice(0, at), line.slice(at + 2)];
   }));
-  assert.equal(fields.name, 'repo-explainer');
+  assert.equal(fields.name, 'concept-explainer');
   assert.ok(fields.description && fields.description.length > 40);
 });
 

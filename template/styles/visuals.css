@@ -1,0 +1,107 @@
+/* The visuals kit (chapters/viz-*.js): nine kinds drawn as SVG, one detail
+   panel each. Hairline strokes, surface fills, var(--select) for the part
+   you picked and the links that touch it. No big fills, no gradients. */
+
+.viz-figure { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; margin: 0; padding: var(--card-pad); border-radius: var(--radius); background: var(--surface); box-shadow: var(--ring); container-type: inline-size; }
+.viz-figure.is-compact { gap: 12px; padding: 0; background: none; box-shadow: none; }
+.viz-cap { display: grid; gap: 4px; }
+.viz-title { font-size: 22px; line-height: 1.2; letter-spacing: -0.03em; }
+h4.viz-title { font-size: 17px; letter-spacing: -0.015em; }
+.viz-caption { max-width: 46em; color: var(--body); }
+.viz { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--grid-gap); align-items: start; min-width: 0; }
+@container (min-width: 880px) { .viz:not(.is-compact) { grid-template-columns: minmax(0, 1fr) minmax(240px, 300px); } }
+.viz-stage { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+.viz-svg { display: block; max-width: 100%; height: auto; overflow: visible; }
+.viz-svg:focus { outline: none; }
+.viz-detail { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-content: start; min-height: 120px; padding: 16px; border-radius: var(--radius); background: var(--canvas); box-shadow: inset 0 0 0 var(--hair) var(--line); }
+.viz-detail h3 { font-size: 18px; line-height: 1.25; letter-spacing: -0.02em; }
+.viz-detail-text, .viz-detail p { color: var(--body); }
+.viz-facts { display: grid; gap: 6px; margin-block-start: 2px; }
+.viz-facts > div { display: grid; grid-template-columns: minmax(0, 7.5em) minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.viz-facts dt { font-family: var(--mono); font-size: 11.5px; letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--muted); overflow-wrap: anywhere; }
+.viz-facts dd { font-size: 14.5px; color: var(--ink); overflow-wrap: anywhere; }
+.viz-rel { display: grid; gap: 2px; }
+
+/* ---------- Shapes ---------- */
+.viz-part { cursor: pointer; outline: none; }
+.viz-box { fill: var(--surface); stroke: var(--faint); stroke-width: var(--hair); rx: var(--radius); transition: stroke 160ms var(--ease); }
+.viz-label { font-family: var(--sans); font-size: 13px; font-weight: 500; fill: var(--ink); }
+.viz-index { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+.viz-value, .viz-cell { font-family: var(--mono); font-size: 12px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.viz-link { fill: none; stroke: var(--faint); stroke-width: 1.25; transition: stroke 160ms var(--ease); }
+.viz-link.is-flow { stroke: var(--muted); }
+.viz-link.is-on { stroke: var(--select); stroke-width: 1.75; }
+.viz-tip.is-rest { fill: var(--faint); }
+.viz-tip.is-on { fill: var(--select); }
+/* Edge labels sit off the stroke on a canvas pill with a hairline ring. */
+.viz-edge-label { font-family: var(--mono); font-size: 11.5px; fill: var(--muted); }
+.viz-edge-pill { fill: var(--canvas); stroke: var(--line); stroke-width: 1; rx: var(--radius-sm); }
+.viz-edge-tag.is-on .viz-edge-label { fill: var(--ink); }
+.viz-edge-tag.is-on .viz-edge-pill { stroke: var(--select); }
+.viz-svg.has-selection .viz-part:not(.is-selected):not(.is-related) { opacity: 0.5; }
+.viz-part { transition: opacity 160ms var(--ease); }
+.viz-part.is-related .viz-box { stroke: var(--muted); }
+.viz-part.is-selected .viz-box { stroke: var(--select); stroke-width: 2; }
+@media (hover: hover) { .viz-part:not(.is-selected):hover :is(.viz-box, .viz-chip) { stroke: var(--muted); } }
+.viz-part:focus-visible :is(.viz-box, .viz-row-hit, .viz-chip) { stroke: var(--ink); stroke-width: 2; stroke-dasharray: 4 3; }
+.viz-part:focus-visible .viz-dot { stroke: var(--ink); stroke-width: 3; }
+
+/* state, narrow: numbered badges on the arcs, spelled out in a key */
+.viz-badge circle { fill: var(--surface); stroke: var(--faint); stroke-width: 1; }
+.viz-badge text { font-family: var(--mono); font-size: 10.5px; fill: var(--muted); }
+.viz-badge.is-on circle { stroke: var(--select); stroke-width: 1.5; }
+.viz-badge.is-on text { fill: var(--ink); }
+.viz-key-list { display: grid; gap: 4px; font-size: 14px; color: var(--body); }
+.viz-key-list li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; align-items: baseline; }
+.viz-key-n { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--faint); font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+
+/* compare */
+.viz-col-head { font-family: var(--sans); font-size: 12px; font-weight: 500; fill: var(--ink); dominant-baseline: hanging; }
+.viz-rule { stroke: var(--line); stroke-width: 1; }
+.viz-row-hit { fill: transparent; stroke: transparent; rx: var(--radius-sm); }
+@media (hover: hover) { .viz-part:not(.is-selected):hover .viz-row-hit { fill: var(--hover-tint); } }
+.viz-part.is-selected .viz-row-hit { fill: var(--select-wash); stroke: var(--select); stroke-width: 1.5; }
+.viz-yes { fill: var(--ink); }
+.viz-no { fill: none; stroke: var(--muted); stroke-width: 1.25; }
+.viz-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-family: var(--mono); font-size: 12px; letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--muted); }
+.viz-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.viz-key { position: relative; display: inline-block; width: 10px; height: 10px; overflow: hidden; border-radius: 50%; }
+.viz-key.is-yes { background: var(--ink); }
+.viz-key.is-no, .viz-key.is-half { box-shadow: inset 0 0 0 1.25px var(--muted); }
+.viz-key.is-half::after { content: ""; position: absolute; inset-block: 0; inset-inline-start: 0; width: 50%; background: var(--ink); }
+.viz-key-glyph { font-family: var(--mono); font-weight: 500; color: var(--ink); }
+
+/* beforeAfter */
+.viz-panel { fill: none; stroke: var(--line); stroke-width: var(--hair); rx: var(--radius); }
+.viz-panel-head { font-family: var(--mono); font-size: 11px; letter-spacing: 0.071em; fill: var(--muted); }
+.viz-glyph { font-family: var(--mono); font-size: 14px; font-weight: 500; fill: var(--ink); }
+.viz-notes { display: grid; gap: 8px; }
+.viz-note-list { display: grid; gap: 4px; }
+.viz-note-list li { position: relative; padding-inline-start: 16px; font-size: 14.5px; color: var(--body); }
+.viz-note-list li::before { content: ""; position: absolute; inset-inline-start: 2px; inset-block-start: 0.55em; width: 5px; height: 5px; border-radius: 50%; background: var(--faint); }
+
+/* quadrant */
+.viz-plot { fill: none; stroke: var(--line); stroke-width: var(--hair); }
+.viz-mid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 4 4; }
+.viz-axis { font-family: var(--sans); font-size: 12px; font-weight: 500; fill: var(--muted); }
+.viz-axis-end { font-family: var(--mono); font-size: 11px; fill: var(--quiet); }
+.viz-dot { fill: var(--surface); stroke: var(--ink); stroke-width: 1.5; transition: fill 160ms var(--ease); }
+.viz-part.is-selected .viz-dot { fill: var(--select); stroke: var(--select); }
+.viz-point-label { font-family: var(--sans); font-size: 12.5px; font-weight: 500; fill: var(--ink); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+
+/* venn */
+.viz-set { fill: none; stroke: var(--faint); stroke-width: 1.25; transition: stroke 160ms var(--ease); }
+.viz-set.is-on { stroke: var(--select); stroke-width: 2; }
+.viz-set-label { font-family: var(--sans); font-size: 12px; font-weight: 500; fill: var(--muted); }
+.viz-set-label.is-on { fill: var(--ink); }
+.viz-chip { fill: var(--surface); stroke: transparent; stroke-width: 1.5; rx: var(--radius-sm); }
+.viz-part.is-selected .viz-chip { stroke: var(--select); }
+.viz-item-label { font-family: var(--sans); font-size: 12px; font-weight: 500; fill: var(--ink); }
+
+/* ---------- Playful ---------- */
+:root[data-style="playful"] :is(.viz-label, .viz-col-head, .viz-axis, .viz-point-label, .viz-item-label, .viz-set-label) { font-weight: 800; }
+:root[data-style="playful"] :is(.viz-panel-head, .viz-legend, .viz-facts dt) { font-family: var(--sans); font-weight: 800; }
+:root[data-style="playful"] .viz-link { stroke-width: 2; }
+:root[data-style="playful"] .viz-link.is-on { stroke-width: 2.5; }
+:root[data-style="playful"] .viz-part.is-selected .viz-box { stroke-width: 3; }
+:root[data-style="playful"] .viz-dot { stroke-width: 2.5; }

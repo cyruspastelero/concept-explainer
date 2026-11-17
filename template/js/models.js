@@ -59,9 +59,9 @@ function renderModels(data, mount) {
   const modelNames = new Set(models.map((m) => m.name));
   const svg = s('svg', { class: 'map-edges', 'aria-hidden': 'true' });
   const grid = h('div', { class: 'er-grid', style: `--er-cols:${ordered.length + 1}` },
-    ordered.map((model, i) => entityBox(model, i, modelNames, () => select(model.name))));
+    ordered.map((model, i) => entityBox(model, i, modelNames, () => pick(model.name))));
   const canvas = h('div', { class: 'map-canvas er-canvas', style: `--er-cols:${ordered.length + 1}` }, svg, grid);
-  const detail = h('div', { class: 'card er-detail', 'aria-live': 'polite' });
+  const detail = h('div', { class: 'panel er-detail', 'aria-live': 'polite' });
   let selected = ordered[0] ? ordered[0].name : null;
 
   function select(name) {
@@ -70,44 +70,13 @@ function renderModels(data, mount) {
     fill(detail, ...modelDetail(models.find((m) => m.name === name)));
   }
 
-  function paint() {
-    const related = new Set(edges.filter((e) => e.from === selected || e.to === selected).flatMap((e) => [e.from, e.to]));
-    canvas.classList.add('has-selection');
-    grid.querySelectorAll('.entity').forEach((el) => {
-      el.classList.toggle('is-selected', el.dataset.entity === selected);
-      el.classList.toggle('is-related', related.has(el.dataset.entity));
-      el.setAttribute('aria-pressed', String(el.dataset.entity === selected));
-    });
-    svg.querySelectorAll('[data-edge]').forEach((g) => {
-      const [from, to] = g.dataset.edge.split('→');
-      const active = from === selected || to === selected;
-      g.querySelectorAll('path, text').forEach((part) => part.classList.toggle('is-active', active));
-    });
+  function pick(name) {
+    select(name);
+    setDeepLink(`data/${linkPart(name)}`);
   }
 
-  function modelDetail(model) {
-    if (!model) return [];
-    const rels = edges.filter((e) => e.from === model.name || e.to === model.name);
-    return [
-      h('div', { class: 'er-detail-head' },
-        h('h3', null, icon('db'), model.name),
-        model.summary && h('p', null, model.summary)),
-      h('div', { class: 'er-fields', role: 'table', 'aria-label': `${model.name} fields` },
-        h('div', { class: 'er-row er-row-head', role: 'row' },
-          h('span', { role: 'columnheader' }, 'Field'), h('span', { role: 'columnheader' }, 'Type'), h('span', { role: 'columnheader' }, 'Meaning')),
-        list(model.fields).map((field) => fieldRow(field, modelNames, select))),
-      rels.length > 0 && h('div', { class: 'er-rels' },
-        h('div', { class: 'detail-label' }, 'Relationships'),
-        h('ul', { class: 'rel' }, rels.map((edge) => {
-          const other = edge.from === model.name ? edge.to : edge.from;
-          const [a, b] = edge.from === model.name ? edge.ends : [...edge.ends].reverse();
-          return h('li', null,
-            h('span', { class: 'tag' }, `${a || '?'} : ${b || '?'}`),
-            h('span', null, `${model.name} ${edge.from === model.name ? edge.kind : 'is linked from'} `),
-            h('button', { class: 'link', type: 'button', onclick: () => select(other) }, other));
-        }))),
-    ];
-  }
+  const paint = () => paintEntities(canvas, grid, svg, edges, selected);
+  const modelDetail = (model) => entityDetail(model, edges, modelNames, pick);
 
   function drawEdges() {
     const box = canvas.getBoundingClientRect();
@@ -116,12 +85,62 @@ function renderModels(data, mount) {
     paint();
   }
 
-  if (!models.length) return;
-  mount.append(h('div', { class: 'map-scroll' }, canvas), detail);
+  if (!models.length) return null;
+  mount.append(h('div', { class: 'panel map-panel' }, h('div', { class: 'map-scroll' }, canvas)), detail);
   select(selected);
   const redraw = () => window.requestAnimationFrame(drawEdges);
   new ResizeObserver(redraw).observe(canvas);
   if (document.fonts) document.fonts.ready.then(redraw);
+  return {
+    open([name] = []) {
+      if (name === undefined || !modelNames.has(name)) return null;
+      select(name);
+      return grid.querySelector(`[data-entity="${CSS.escape(name)}"]`);
+    },
+  };
+}
+
+// Highlight the selected entity, its neighbours and their relation lines.
+function paintEntities(canvas, grid, svg, edges, selected) {
+  const related = new Set(edges.filter((e) => e.from === selected || e.to === selected).flatMap((e) => [e.from, e.to]));
+  canvas.classList.add('has-selection');
+  grid.querySelectorAll('.entity').forEach((el) => {
+    el.classList.toggle('is-selected', el.dataset.entity === selected);
+    el.classList.toggle('is-related', related.has(el.dataset.entity));
+    el.setAttribute('aria-pressed', String(el.dataset.entity === selected));
+  });
+  svg.querySelectorAll('[data-edge]').forEach((g) => {
+    const [from, to] = g.dataset.edge.split('→');
+    const active = from === selected || to === selected;
+    g.querySelectorAll('path, text').forEach((part) => part.classList.toggle('is-active', active));
+  });
+}
+
+function entityRelation(model, edge, pick) {
+  const other = edge.from === model.name ? edge.to : edge.from;
+  const [a, b] = edge.from === model.name ? edge.ends : [...edge.ends].reverse();
+  return h('li', null,
+    tag(`${a || '?'} : ${b || '?'}`),
+    h('span', null, softBreaks(`${model.name} ${edge.from === model.name ? edge.kind : 'is linked from'} `)),
+    h('button', { class: 'link', type: 'button', onclick: () => pick(other) }, softBreaks(other)));
+}
+
+// The detail panel: fields as a table, then the relationships.
+function entityDetail(model, edges, modelNames, pick) {
+  if (!model) return [];
+  const rels = edges.filter((e) => e.from === model.name || e.to === model.name);
+  return [
+    h('div', { class: 'er-detail-head' },
+      h('h3', null, h('span', { class: 'detail-icon' }, icon('db')), h('span', null, softBreaks(model.name))),
+      model.summary && h('p', null, softBreaks(model.summary))),
+    h('div', { class: 'er-fields', role: 'table', 'aria-label': `${model.name} fields` },
+      h('div', { class: 'er-row er-row-head', role: 'row' },
+        h('span', { role: 'columnheader' }, 'Field'), h('span', { role: 'columnheader' }, 'Type'), h('span', { role: 'columnheader' }, 'Meaning')),
+      list(model.fields).map((field) => fieldRow(field, modelNames, pick))),
+    rels.length > 0 && h('div', { class: 'er-rels' },
+      h('p', { class: 'eyebrow quiet' }, 'Relationships'),
+      h('ul', { class: 'rel' }, rels.map((edge) => entityRelation(model, edge, pick)))),
+  ];
 }
 
 function entityBox(model, index, modelNames, onSelect) {
@@ -136,10 +155,10 @@ function entityBox(model, index, modelNames, onSelect) {
     class: 'entity', type: 'button', 'data-entity': model.name, 'aria-pressed': 'false',
     style: `grid-column:${col} / span 2;grid-row:${row + 1}`, onclick: onSelect,
   },
-  h('span', { class: 'entity-head' }, icon('db'), h('span', { class: 'entity-name' }, model.name), h('span', { class: 'entity-count' }, `${list(model.fields).length} fields`)),
+  h('span', { class: 'entity-head' }, h('span', { class: 'node-icon' }, icon('db')), h('span', { class: 'entity-name' }, softBreaks(model.name)), h('span', { class: 'entity-count' }, `${list(model.fields).length} fields`)),
   keys.length > 0 && h('span', { class: 'entity-keys' }, keys.map((f) => {
     const b = fieldBadges(f, modelNames);
-    return h('span', { class: 'entity-key' }, h('span', { class: `key-badge ${b.isPk ? 'is-pk' : 'is-fk'}` }, b.isPk ? 'PK' : 'FK'), f.name);
+    return h('span', { class: 'entity-key' }, h('span', { class: `key-badge ${b.isPk ? 'is-pk' : 'is-fk'}` }, b.isPk ? 'PK' : 'FK'), h('span', null, softBreaks(f.name)));
   })));
 }
 
@@ -151,8 +170,8 @@ function fieldRow(field, modelNames, select) {
       b.isPk && h('span', { class: 'key-badge is-pk' }, 'PK'),
       b.isFk && h('span', { class: 'key-badge is-fk' }, 'FK'),
       b.fkTarget && h('button', { class: 'link er-fk', type: 'button', onclick: () => select(b.fkTarget) }, `→ ${b.fkTarget}`)),
-    h('span', { class: 'er-type', role: 'cell' }, h('code', null, text(field.type, '—'))),
-    h('span', { class: 'er-note', role: 'cell' }, text(field.note, '')));
+    h('span', { class: 'er-type', role: 'cell' }, h('code', null, text(field.type, 'any'))),
+    h('span', { class: 'er-note', role: 'cell' }, softBreaks(text(field.note, ''))));
 }
 
 function relationShape(edge, grid, box) {

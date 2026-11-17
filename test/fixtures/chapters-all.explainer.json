@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 2,
+  "meta": {
+    "type": "incident",
+    "title": "Checkout outage of 3 November, explained",
+    "summary": "Checkout failed for 41 minutes after a cache change. This fixture exercises every v2 chapter and all nine visual kinds; the incident is fictional.",
+    "status": "done",
+    "tags": ["incident", "checkout"],
+    "generatedAt": "2026-11-18",
+    "chapters": ["context", "timeline", "diff", "options", "visuals", "map", "flows", "concepts", "risks", "rollout"]
+  },
+  "context": {
+    "problem": "Without a size limit on cached carts, one huge cart filled the cache node and every checkout timed out because the session lookup waited on it.",
+    "goals": ["Checkout survives one bad cart", "Alerts fire within two minutes", "A cart over the limit gets a clear error"],
+    "nonGoals": ["Replacing the cache vendor", "Changing how carts are priced"],
+    "background": "The cache was shared by sessions and carts since the 2024 rewrite."
+  },
+  "timeline": [
+    { "at": "14:02", "label": "Cart writes start to slow", "kind": "detect", "detail": "p99 write time goes from 4 ms to 900 ms." },
+    { "at": "14:06", "label": "Checkout error rate alert fires", "kind": "detect" },
+    { "at": "14:11", "label": "On call opens the incident", "kind": "act" },
+    { "at": "14:19", "label": "AbstractCartSerializationCoordinatorFactory found holding the lock", "kind": "act", "detail": "A long token on purpose, to check wrapping." },
+    { "at": "14:31", "label": "Oversized cart evicted by hand", "kind": "fix" },
+    { "at": "14:43", "label": "Checkout back to normal", "kind": "fix" },
+    { "at": "2026-11-05", "label": "Review: carts and sessions need separate caches", "kind": "learn" },
+    { "at": "2026-11-06", "label": "Limit shipped" }
+  ],
+  "diff": [
+    { "path": "packages/cart/src/serialization/AbstractCartSerializationCoordinatorFactory.ts", "status": "modified", "summary": "Rejects carts over 256 KB before they reach the cache.", "nodes": ["cart"], "lines": "+64 -12", "key": true },
+    { "path": "packages/cart/src/limits.ts", "status": "added", "summary": "One constant for the cart size limit, read from config.", "nodes": ["cart"], "lines": "+18 -0", "key": true },
+    { "path": "packages/session/src/cache.ts", "status": "renamed", "from": "packages/shared/src/cache.ts", "summary": "Sessions get their own cache client.", "nodes": ["session", "cache"], "lines": "+7 -7" },
+    { "path": "packages/shared/src/legacy-cart-cache.ts", "status": "removed", "summary": "The shared cart cache wrapper is gone.", "lines": "+0 -120" },
+    { "path": "docs/runbooks/checkout.md", "status": "modified", "summary": "How to evict one cart by hand." }
+  ],
+  "options": [
+    { "title": "Cap cart size", "summary": "Refuse carts over 256 KB.", "pros": ["Small change", "Clear error for the user"], "cons": ["Very large B2B carts need another path"], "chosen": true, "why": "It removes the failure mode in one release; splitting caches is the longer fix and is planned." },
+    { "title": "Split the caches", "summary": "Sessions and carts on separate nodes.", "pros": ["One cannot starve the other", "Easier to size", "Clearer metrics"], "cons": ["Two clusters to run", "Takes a quarter"] },
+    { "title": "Do nothing", "summary": "Rely on alerts and manual eviction.", "pros": [], "cons": ["It will happen again", "41 minutes of lost sales each time"] }
+  ],
+  "risks": [
+    { "risk": "Large B2B carts are refused", "impact": "medium", "mitigation": "Sales ops can raise the limit per account.", "owner": "Checkout team" },
+    { "risk": "The limit is set too low by mistake", "impact": "high", "mitigation": "A dashboard shows refused carts per hour, alerting above 5." },
+    { "risk": "Docs drift from the code", "impact": "low", "mitigation": "The runbook links to the constant." }
+  ],
+  "rollout": [
+    { "label": "Ship the limit behind a flag", "done": true, "command": "pnpm deploy cart --flag cart-limit" },
+    { "label": "Turn it on for 10 percent", "done": true, "detail": "Watch refused carts for a day." },
+    { "label": "Turn it on for everyone", "done": false },
+    { "label": "Split the caches", "done": false, "detail": "Planned for next quarter." }
+  ],
+  "layers": [
+    { "id": "web", "label": "Web", "color": "blue" },
+    { "id": "app", "label": "Services", "color": "green" },
+    { "id": "data", "label": "Data", "color": "yellow" }
+  ],
+  "nodes": [
+    { "id": "shop", "label": "Shop", "layer": "web", "kind": "ui", "summary": "The storefront.", "files": [], "status": "unchanged" },
+    { "id": "cart", "label": "Cart service", "layer": "app", "kind": "service", "summary": "Holds carts.", "files": ["packages/cart/"], "status": "changed" },
+    { "id": "session", "label": "Session service", "layer": "app", "kind": "auth", "summary": "Looks up sessions.", "files": ["packages/session/"], "status": "added" },
+    { "id": "cache", "label": "Cache", "layer": "data", "kind": "cache", "summary": "Redis.", "files": [], "status": "removed" }
+  ],
+  "edges": [
+    { "from": "shop", "to": "cart" },
+    { "from": "cart", "to": "cache", "kind": "data" },
+    { "from": "session", "to": "cache", "kind": "data" }
+  ],
+  "flows": [
+    { "id": "checkout-before", "title": "Checkout, before", "variant": "before", "pair": "checkout", "trigger": "Pay", "summary": "One cache for all.", "steps": [
+      { "from": "shop", "to": "cart", "label": "Sends the cart", "kind": "request", "file": "packages/cart/src/index.ts:1" },
+      { "from": "cart", "to": "cache", "label": "Writes any size", "kind": "data", "file": "packages/cart/src/index.ts:2" },
+      { "from": "cache", "to": "cart", "label": "Stalls", "kind": "response", "file": "packages/cart/src/index.ts:3" }
+    ] },
+    { "id": "checkout-after", "title": "Checkout, after", "variant": "after", "pair": "checkout", "trigger": "Pay", "summary": "A limit, and separate caches.", "steps": [
+      { "from": "shop", "to": "cart", "label": "Sends the cart", "kind": "request", "file": "packages/cart/src/index.ts:1" },
+      { "from": "cart", "to": "cart", "label": "Checks the size", "kind": "internal", "file": "packages/cart/src/limits.ts:1" },
+      { "from": "session", "to": "session", "label": "Reads its own cache", "kind": "internal", "file": "packages/session/src/cache.ts:1" }
+    ] }
+  ],
+  "concepts": [
+    { "title": "Noisy neighbours", "body": "Without isolation, one tenant's load slows every other tenant because they share one resource.", "parts": [
+      { "label": "Shares one resource", "detail": "Sessions and carts used one cache node." },
+      { "label": "One user grows", "detail": "A 40 MB cart." },
+      { "label": "Everyone waits", "detail": "Session reads queue behind the write." }
+    ], "visual": { "kind": "funnel", "title": "Where checkouts were lost", "caption": "Most visitors who reached payment were lost at the session lookup.", "items": [
+      { "label": "Opened checkout", "value": 12400 },
+      { "label": "Reached payment", "value": 9100 },
+      { "label": "Session looked up", "value": 1300, "detail": "The stalled step." },
+      { "label": "Paid", "value": 1200 }
+    ] } },
+    { "title": "Limits are contracts", "body": "A limit tells callers what will be refused, so a refusal is an answer, not an outage.", "parts": [
+      { "label": "States the limit" }, { "label": "Refuses early" }
+    ] },
+    { "title": "Separate what fails together", "body": "Things that must not fail together should not share a resource." }
+  ],
+  "diagrams": [
+    { "id": "stack", "kind": "layers", "title": "Where the limit sits", "caption": "The size check runs before the cache, so a huge cart never reaches it.", "items": [
+      { "label": "Checkout page" }, { "label": "Cart service", "detail": "Checks the size here." }, { "label": "Cache client" }, { "label": "Cache node" }
+    ] },
+    { "id": "loop", "kind": "cycle", "title": "The review loop", "caption": "Every incident feeds a fix that is then watched for the next one.", "items": [
+      { "label": "Detect" }, { "label": "Respond" }, { "label": "Fix" }, { "label": "Review" }, { "label": "Watch" }
+    ] },
+    { "id": "cart-states", "kind": "state", "title": "A cart's states", "caption": "A cart over the limit is refused and never reaches the cache.", "states": [
+      { "id": "open", "label": "Open" }, { "id": "checked", "label": "Size checked" }, { "id": "stored", "label": "Stored" }, { "id": "refused", "label": "Refused" }, { "id": "paid", "label": "Paid" }
+    ], "transitions": [
+      { "from": "open", "to": "checked", "label": "pay" }, { "from": "checked", "to": "stored", "label": "under limit" },
+      { "from": "checked", "to": "refused", "label": "over limit" }, { "from": "stored", "to": "paid", "label": "charge" },
+      { "from": "refused", "to": "open", "label": "remove items" }, { "from": "stored", "to": "stored", "label": "update" }
+    ] },
+    { "id": "fixes", "kind": "compare", "title": "Fixes against goals", "caption": "Only the cap meets every goal this quarter.", "columns": ["Cap size", "Split caches", "Do nothing"], "rows": [
+      { "label": "Survives one bad cart", "values": [true, true, false] },
+      { "label": "Ships this week", "values": [true, false, true] },
+      { "label": "Clear user error", "values": [true, "partial", false] },
+      { "label": "Cost per month", "values": [0, 1800, 0] }
+    ] },
+    { "id": "owners", "kind": "hierarchy", "title": "Who owns what", "caption": "Checkout owns the limit, Platform owns both caches.", "nodes": [
+      { "id": "eng", "label": "Engineering" }, { "id": "checkout", "label": "Checkout team", "parent": "eng" }, { "id": "platform", "label": "Platform team", "parent": "eng" },
+      { "id": "limit", "label": "Cart limit", "parent": "checkout" }, { "id": "c1", "label": "Session cache", "parent": "platform" }, { "id": "c2", "label": "Cart cache", "parent": "platform" }
+    ] },
+    { "id": "moves", "kind": "beforeAfter", "title": "What moved", "caption": "Carts and sessions stop sharing a cache, and a cart has a size limit.", "before": { "items": ["One shared cache", "Any cart size", "Manual eviction"] }, "after": { "items": ["One shared cache", { "label": "Carts capped at 256 KB", "detail": "Refused with a clear error." }, "Alert on refused carts"] }, "notes": ["The cache split comes next quarter."] },
+    { "id": "effort", "kind": "quadrant", "title": "Effort against impact", "caption": "The cap is cheap and removes most of the risk.", "axes": { "x": "Effort", "y": "Impact" }, "points": [
+      { "label": "Cap size", "x": 0.15, "y": 0.8 }, { "label": "Split caches", "x": 0.8, "y": 0.9 }, { "label": "Do nothing", "x": 0.05, "y": 0.05 }, { "label": "Bigger node", "x": 0.3, "y": 0.35 }
+    ] },
+    { "id": "shared", "kind": "venn", "title": "What shares the cache", "caption": "Only the cart writes are both large and on the shared node.", "sets": [
+      { "id": "large", "label": "Large writes" }, { "id": "shared", "label": "On the shared node" }, { "id": "hot", "label": "On the checkout path" }
+    ], "items": [
+      { "label": "Cart writes", "in": ["large", "shared", "hot"] }, { "label": "Session reads", "in": ["shared", "hot"] },
+      { "label": "Exports", "in": ["large"] }, { "label": "Feature flags", "in": ["shared"] }, { "label": "Payments", "in": ["hot"] }, { "label": "Images", "in": ["large", "shared"] }
+    ] }
+  ],
+  "quiz": [
+    { "question": "A cart of 300 KB arrives. What does the user see?", "options": ["A clear error", "A timeout", "Nothing"], "answer": 0, "explain": "The limit refuses it before the cache. A timeout was the old behaviour." },
+    { "question": "Which part would you change to raise the limit?", "options": ["limits.ts", "cache.ts", "The runbook"], "answer": 0, "explain": "The constant lives there. cache.ts only holds the client." },
+    { "question": "Why split the caches later?", "options": ["So one tenant cannot starve another", "To save money", "For speed"], "answer": 0, "explain": "Isolation removes the shared failure. It costs more, not less." }
+  ]
+}

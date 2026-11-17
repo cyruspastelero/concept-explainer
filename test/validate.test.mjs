@@ -52,8 +52,8 @@ test('quiz answers must be a valid option index', () => {
 
 test('unknown chapter keys are errors', () => {
   const data = clone();
-  data.meta = { ...data.meta, chapters: ['map', 'timeline'] };
-  assert.ok(validateExplainer(data).errors.some((e) => e.includes('unknown chapter "timeline"')));
+  data.meta = { ...data.meta, chapters: ['map', 'bogus'] };
+  assert.ok(validateExplainer(data).errors.some((e) => e.includes('unknown chapter "bogus"')));
 });
 
 test('HTML markup in prose is rejected, but code fields may contain it', () => {

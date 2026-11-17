@@ -1,0 +1,44 @@
+{
+  "id": "concept",
+  "type": "concept",
+  "name": "Concept",
+  "whenToUse": "A technical idea not tied to one repo (OAuth, CRDTs, the event loop): broken into parts and drawn.",
+  "chapters": [
+    "concepts",
+    "map",
+    "flows",
+    "glossary",
+    "quiz"
+  ],
+  "optionalChapters": [
+    "code"
+  ],
+  "codeWalkthrough": "Optional. Only when a few lines carry the idea; use illustrative: true with no file for pseudo-code.",
+  "sourceKind": "doc",
+  "mustCover": [
+    "The idea in one sentence a newcomer can repeat",
+    "The 2 to 6 parts it breaks into",
+    "A picture for each big idea (pick a visual kind)",
+    "Where it is used, and where it is not",
+    "Sources, cited by url"
+  ],
+  "starter": {
+    "concepts": [
+      {
+        "title": "TODO: the big idea",
+        "body": "TODO: two plain sentences",
+        "parts": [
+          {
+            "label": "TODO: part one"
+          },
+          {
+            "label": "TODO: part two"
+          }
+        ]
+      }
+    ],
+    "diagrams": [],
+    "glossary": [],
+    "quiz": []
+  }
+}

@@ -644,5 +644,54 @@
       "command": "pnpm dev",
       "note": "Web on :3000, worker logs in the same terminal."
     }
+  ],
+  "walkthroughs": [
+    {
+      "id": "create-task-route",
+      "title": "Creating a task",
+      "file": "apps/web/app/api/tasks/route.ts:10-21",
+      "lang": "ts",
+      "why": "Every new task passes through this handler, so it shows what a route does and what it leaves to the service.",
+      "code": "export async function POST(req: Request) {\n  const session = await auth()\n  if (!session) {\n    return Response.json({ error: 'Sign in first' }, { status: 401 })\n  }\n  const userId = session.user.id\n\n  // Validate at the edge; the service trusts typed input only.\n  const input = CreateTask.parse(await req.json())\n  const task = await tasks.createTask(userId, input)\n  return Response.json(task, { status: 201 })\n}",
+      "steps": [
+        {
+          "lines": "11-14",
+          "note": "Stops a request that has no signed in user.",
+          "kind": "input",
+          "refs": {
+            "node": "middleware"
+          }
+        },
+        {
+          "lines": "17-18",
+          "note": "Parses the body against the CreateTask schema, or fails with a 400.",
+          "why": "Checking shape at the edge means the service only ever sees typed input.",
+          "kind": "why",
+          "refs": {
+            "flow": "create-task",
+            "step": 3
+          }
+        },
+        {
+          "lines": "19",
+          "note": "Hands the work to the task service: limits, the insert and the email job live there.",
+          "kind": "what",
+          "refs": {
+            "concept": 0,
+            "node": "service"
+          }
+        },
+        {
+          "lines": "20",
+          "note": "Answers 201 with the saved task.",
+          "kind": "output",
+          "refs": {
+            "flow": "create-task",
+            "step": 7
+          }
+        }
+      ],
+      "takeaway": "The route checks who and what, then gets out of the way: the rules live in the service."
+    }
   ]
 }
