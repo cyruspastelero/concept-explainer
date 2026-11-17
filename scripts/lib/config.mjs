@@ -26,6 +26,9 @@ export const CONFIG_DEFAULTS = Object.freeze({
   budgetUsd: null,
   confirmBeforeStart: true,
   instructions: '',
+  // The installed app is tied to this port. null idle means: launcher 30, manual serve never.
+  servePort: 4747,
+  serveIdleMinutes: null,
 });
 
 export const CONFIG_KEYS = Object.keys(CONFIG_DEFAULTS);
@@ -71,6 +74,10 @@ function valueErrors(key, value) {
       return value.flatMap((kind, i) => (VISUAL_KINDS.includes(kind) ? [] : [`visuals[${i}]: ${quote(kind)} is not one of ${VISUAL_KINDS.join(', ')}`]));
     case 'chapters':
       return chapterErrors(value);
+    case 'servePort':
+      return Number.isInteger(value) && value >= 1024 && value <= 65535 ? [] : ['servePort: must be a whole number from 1024 to 65535'];
+    case 'serveIdleMinutes':
+      return value === null || (Number.isInteger(value) && value >= 0 && value <= 1440) ? [] : ['serveIdleMinutes: must be a whole number from 0 to 1440, or null'];
     case 'budgetUsd':
       return value === null || (typeof value === 'number' && Number.isFinite(value) && value >= 0) ? [] : ['budgetUsd: must be a number of 0 or more, or null'];
     case 'instructions':
@@ -124,6 +131,12 @@ export function parseConfigValue(key, raw) {
     if (['on', 'true', 'yes'].includes(text)) return true;
     if (['off', 'false', 'no'].includes(text)) return false;
     throw new Error(`${key}: use on or off`);
+  }
+  if (key === 'servePort' || key === 'serveIdleMinutes') {
+    if (key === 'serveIdleMinutes' && ['', 'none', 'null'].includes(text)) return null;
+    const number = Number(text);
+    if (!/^\d+$/.test(text)) throw new Error(`${key}: "${text}" is not a whole number`);
+    return number;
   }
   if (key === 'budgetUsd') {
     if (['', 'none', 'null'].includes(text)) return null;

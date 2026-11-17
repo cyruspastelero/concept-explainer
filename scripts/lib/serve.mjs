@@ -10,7 +10,7 @@ import { extname, join, resolve, sep } from 'node:path';
 import { readConfig, readManifest, rebuildLibrary, withLibraryLock, writeConfig } from './library.mjs';
 import { appRoute } from './app-routes.mjs';
 import { isDeviceToken, redeemPairCode } from './pairing.mjs';
-import { APP_NAME, PAIR_HEADER, clearServerState, writeServerState } from './serve-state.mjs';
+import { APP_NAME, PAIR_HEADER, clearServerState, healthProof, writeServerState } from './serve-state.mjs';
 import { MAX_BUNDLE_BYTES, applyImport, createBundle, parseBundle, planImport } from './bundle.mjs';
 import { SLUG_PATTERN } from './library-model.mjs';
 import { pageCspFrom } from './build.mjs';
@@ -336,7 +336,11 @@ function handler(state) {
     }
     const failed = (error) => fail(res, 500, `${url.pathname} failed: ${error.message}`);
     if (url.pathname === '/api/health') {
-      return req.method === 'GET' ? sendJson(res, 200, { app: APP_NAME, version: VERSION, instance: state.instance }) : fail(res, 405, 'use GET');
+      if (req.method !== 'GET') return fail(res, 405, 'use GET');
+      // With ?nonce=, prove this is the server server.json describes (see verifyServer).
+      const nonce = url.searchParams.get('nonce');
+      const proof = nonce && /^[0-9a-f]{32}$/.test(nonce) ? { proof: healthProof(state.secret, nonce) } : {};
+      return sendJson(res, 200, { app: APP_NAME, version: VERSION, instance: state.instance, ...proof });
     }
     if (url.pathname === '/api/pages') return req.method === 'GET' ? pageList(state, res) : fail(res, 405, 'use GET');
     if (url.pathname === PAIR_PATH) return req.method === 'POST' ? pairDevice(state, req, res).catch(failed) : fail(res, 405, 'use POST');
@@ -373,7 +377,7 @@ export function startLibraryServer({
   home, port = 0, lockWaitMs = SERVE_LOCK_WAIT_MS, idleMinutes = 0, now = Date.now, idleCheckMs = 30000, writeState = false,
 }) {
   const state = {
-    home, root: realpathSync(home), token: randomBytes(24).toString('hex'), instance: randomBytes(12).toString('hex'),
+    home, root: realpathSync(home), token: randomBytes(24).toString('hex'), instance: randomBytes(12).toString('hex'), secret: randomBytes(32).toString('hex'),
     port: 0, now, lastActivity: now(), lockWaitMs,
   };
   const server = createServer(handler(state));
@@ -392,7 +396,9 @@ export function startLibraryServer({
     server.listen(port, HOST, () => {
       state.port = server.address().port;
       if (writeState) {
-        writeServerState(home, { pid: process.pid, port: state.port, instance: state.instance, version: VERSION, startedAt: new Date(now()).toISOString(), idleMinutes });
+        writeServerState(home, {
+          pid: process.pid, port: state.port, instance: state.instance, secret: state.secret, version: VERSION, startedAt: new Date(now()).toISOString(), idleMinutes,
+        });
       }
       if (idleMinutes > 0) {
         timer = setInterval(() => {

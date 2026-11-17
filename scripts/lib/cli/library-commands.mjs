@@ -5,8 +5,10 @@ import {
 } from '../library.mjs';
 import { installSkill, resolveConfigDir } from '../install.mjs';
 import { CONFIG_DEFAULTS, setConfigValue } from '../config.mjs';
-import { startLibraryServer } from '../serve.mjs';
 import { localDay, today } from '../dates.mjs';
+import { startOrReuse } from '../serve-state.mjs';
+import { createPairCode, forgetDevices } from '../pairing.mjs';
+import { launch } from '../launch.mjs';
 import { applyImport, createBundle, planImport, readBundleFile } from '../bundle.mjs';
 import { openPath } from '../open.mjs';
 import { validateExplainer } from '../validate.mjs';
@@ -79,14 +81,27 @@ const LIBRARY = {
     err(`✔ default style: ${config.style}\n  run \`${BIN} library rebuild\` to restyle pages already in the library\n`);
   },
   async serve(_positionals, opts) {
-    const port = opts.port === undefined ? 0 : Number(opts.port);
-    if (!Number.isInteger(port) || port < 0 || port > 65535) throw new UsageError(`--port "${opts.port}" is not a port number`);
+    const config = readConfig(home());
+    const port = opts.port === undefined ? config.servePort : Number(opts.port);
+    if (!Number.isInteger(port) || port < 0 || port > 65535) throw new UsageError(`--port "${opts.port}" is not a port number (0 picks a free one)`);
+    const idleMinutes = opts.idle === undefined ? (config.serveIdleMinutes ?? 0) : Number(opts.idle);
+    if (!Number.isInteger(idleMinutes) || idleMinutes < 0 || idleMinutes > 1440) throw new UsageError(`--idle "${opts.idle}" must be whole minutes from 0 to 1440`);
+    if (opts['forget-devices']) {
+      forgetDevices(home());
+      err('✔ forgot every paired device; pages must pair again to save\n');
+    }
     ensureHub({ home: home() });
-    const served = await startLibraryServer({ home: home(), port });
-    out(`Serving ${home()} on 127.0.0.1 only.\nOpen: ${served.url}\nSettings can save while this runs. Press Ctrl+C to stop.\n`);
-    process.once('SIGINT', () => {
-      served.close().then(() => err('\n✔ stopped\n'));
-    });
+    const served = await startOrReuse({ home: home(), port, idleMinutes });
+    if (served.reused) {
+      out(`The library is already being served on 127.0.0.1:${served.port}.\nOpen: http://127.0.0.1:${served.port}/index.html#pair=${createPairCode(home())}\n`);
+      return;
+    }
+    if (served.warning) err(`  ⚠ ${served.warning}\n`);
+    out(`Serving ${home()} on 127.0.0.1 only.\nOpen: ${served.url}\nSettings can save while this runs. ${idleMinutes ? `Stops after ${idleMinutes} idle minutes, or` : 'Press'} Ctrl+C to stop.\n`);
+    const stop = () => served.close();
+    process.once('SIGINT', stop);
+    process.once('SIGTERM', stop);
+    served.stopped.then(() => err('✔ stopped\n'));
   },
 };
 
@@ -121,6 +136,12 @@ const CONFIG = {
 };
 
 export const LIBRARY_COMMANDS = {
+  async launch() {
+    const result = await launch({ home: home() });
+    if (result.warning) err(`  ⚠ ${result.warning}\n`);
+    out(`${result.started ? 'Started' : 'Reused'} the library server and opened http://127.0.0.1:${result.port}/index.html\n`);
+  },
+
   library(positionals, opts) {
     const [sub = 'list', ...rest] = positionals;
     const run = LIBRARY[sub];

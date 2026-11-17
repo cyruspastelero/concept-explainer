@@ -24,6 +24,11 @@ const OPTIONS = {
   remote: { type: 'string' },
   style: { type: 'string' },
   port: { type: 'string' },
+  idle: { type: 'string' },
+  node: { type: 'string' },
+  'launcher-dir': { type: 'string' },
+  'forget-devices': { type: 'boolean' },
+  launcher: { type: 'boolean' },
   tag: { type: 'string' },
   stack: { type: 'string' },
   search: { type: 'string' },
@@ -44,7 +49,7 @@ const COMMANDS = { ...EXPLAIN_COMMANDS, ...LIBRARY_COMMANDS };
 
 // Only commands that read or write the library may move an old one. Checks
 // and throwaway builds (npm run check) must never touch the real home.
-const USES_LIBRARY = new Set(['library', 'config', 'export', 'import', 'install', 'estimate']);
+const USES_LIBRARY = new Set(['library', 'config', 'export', 'import', 'install', 'uninstall', 'estimate', 'launch']);
 const usesLibrary = (command, values) => USES_LIBRARY.has(command) || (command === 'build' && !values['no-library']);
 
 export async function main(argv) {
