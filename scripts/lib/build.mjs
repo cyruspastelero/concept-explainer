@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { buildHash, explainerKey, sectionsFor } from './sections.mjs';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -149,8 +150,14 @@ export function buildExplainer(data, options = {}) {
   const title = data && data.meta && data.meta.title ? `${data.meta.title} · Concept Explainer` : 'Concept Explainer';
   const description = data && data.meta && typeof data.meta.summary === 'string' ? data.meta.summary : '';
   // The page reads which chapters to show and the settings choices from its
-  // context, so the rule and the lists live in one place (scripts/lib).
-  const context = { ...(options.context || {}), chapters: shownChapters(data), enums: pageEnums() };
+  // context, so the rule and the lists live in one place (scripts/lib). The
+  // learning loop adds which sections this build has, which build it is, and
+  // how readers' signals name it. Every page carries them, standalone too.
+  const given = options.context || {};
+  const context = {
+    ...given, chapters: shownChapters(data), enums: pageEnums(),
+    sections: sectionsFor(data), build: buildHash(data), key: explainerKey(data, given.slug),
+  };
   return assemble(parts, title, data, 'boot();', description, context, options.fontBase);
 }
 
@@ -172,6 +179,7 @@ export function buildLibrary(manifest, searchIndex, options = {}) {
     style,
     ...(options.config ? { config: options.config } : {}),
     ...(options.kitHref ? { kitHref: options.kitHref } : {}),
+    ...(options.insights !== undefined ? { insights: options.insights } : {}),
     manifest,
     index: searchIndex,
   };

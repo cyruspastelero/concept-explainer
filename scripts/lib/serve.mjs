@@ -10,6 +10,8 @@ import { extname, join, resolve, sep } from 'node:path';
 import { readConfig, readManifest, rebuildLibrary, withLibraryLock, writeConfig } from './library.mjs';
 import { appRoute } from './app-routes.mjs';
 import { isDeviceToken, redeemPairCode, sweepOpenFiles } from './pairing.mjs';
+import { MAX_BATCH_BYTES, parseSignalBatch } from './signals.mjs';
+import { hubSummary, mergeSignals } from './insights.mjs';
 import { APP_NAME, PAIR_HEADER, clearServerState, healthProof, writeServerState } from './serve-state.mjs';
 import { MAX_BUNDLE_BYTES, applyImport, createBundle, parseBundle, planImport } from './bundle.mjs';
 import { SLUG_PATTERN } from './library-model.mjs';
@@ -253,6 +255,21 @@ async function pairDevice(state, req, res) {
   return sendJson(res, 200, { token });
 }
 
+// Reader signals from a page: a batch merged into the library's memory.
+async function receiveSignals(state, req, res) {
+  const raw = await writeBody(state, req, res, MAX_BATCH_BYTES);
+  if (raw === null) return undefined;
+  if (readConfig(state.home).learning === false) return fail(res, 403, 'learning is off');
+  let batch;
+  try {
+    batch = parseSignalBatch(raw);
+  } catch (error) {
+    return fail(res, 400, error.message);
+  }
+  const result = mergeSignals(state.home, batch);
+  return sendJson(res, 200, { ok: true, ...result });
+}
+
 // The pages a service worker may keep for offline reading, and nothing else.
 function pageList(state, res) {
   const { manifest } = readManifest(state.home);
@@ -349,6 +366,13 @@ function handler(state) {
       return sendJson(res, 200, { app: APP_NAME, version: VERSION, instance: state.instance, ...proof });
     }
     if (url.pathname === '/api/pages') return req.method === 'GET' ? pageList(state, res) : fail(res, 405, 'use GET');
+    if (url.pathname === '/api/signals') return req.method === 'POST' ? receiveSignals(state, req, res).catch(failed) : fail(res, 405, 'use POST');
+    if (url.pathname === '/api/insights') {
+      if (req.method !== 'GET') return fail(res, 405, 'use GET');
+      if (!hasToken(state, req)) return fail(res, 403, 'wrong or missing token');
+      if (readConfig(state.home).learning === false) return fail(res, 403, 'learning is off');
+      return sendJson(res, 200, { insights: hubSummary(state.home) });
+    }
     if (url.pathname === PAIR_PATH) return req.method === 'POST' ? pairDevice(state, req, res).catch(failed) : fail(res, 405, 'use POST');
     if (url.pathname === CONFIG_PATH) {
       if (req.method === 'GET') return hasToken(state, req) ? sendJson(res, 200, { config: readConfig(state.home) }) : fail(res, 403, 'wrong or missing token');
