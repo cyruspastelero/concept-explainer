@@ -91,6 +91,9 @@ export function cspFor(html) {
     "font-src 'self'",
     "img-src 'self' data:",
     "connect-src 'self'",
+    // The installable app: its service worker and manifest come from this server.
+    "worker-src 'self'",
+    "manifest-src 'self'",
     "base-uri 'none'",
     "form-action 'none'",
   ].join('; ');

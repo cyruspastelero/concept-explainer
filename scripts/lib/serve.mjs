@@ -7,7 +7,10 @@ import { createServer } from 'node:http';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { extname, join, resolve, sep } from 'node:path';
-import { readConfig, rebuildLibrary, withLibraryLock, writeConfig } from './library.mjs';
+import { readConfig, readManifest, rebuildLibrary, withLibraryLock, writeConfig } from './library.mjs';
+import { appRoute } from './app-routes.mjs';
+import { isDeviceToken, redeemPairCode } from './pairing.mjs';
+import { APP_NAME, PAIR_HEADER, clearServerState, writeServerState } from './serve-state.mjs';
 import { MAX_BUNDLE_BYTES, applyImport, createBundle, parseBundle, planImport } from './bundle.mjs';
 import { SLUG_PATTERN } from './library-model.mjs';
 import { pageCspFrom } from './build.mjs';
@@ -18,6 +21,14 @@ export const TOKEN_HEADER = 'x-concept-explainer-token';
 export const CONFIG_PATH = '/api/config';
 export const EXPORT_PATH = '/api/export';
 export const IMPORT_PATH = '/api/import';
+export const PAIR_PATH = '/api/pair';
+const VERSION = (() => {
+  try {
+    return JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version;
+  } catch {
+    return '0.0.0';
+  }
+})();
 const MAX_CONFIG_BODY = 64 * 1024;
 
 const TYPES = {
@@ -76,8 +87,9 @@ function sameToken(given, token) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+// One origin only: localhost is redirected to 127.0.0.1 before anything else.
 function allowedOrigins(port) {
-  return [`http://${HOST}:${port}`, `http://localhost:${port}`];
+  return [`http://${HOST}:${port}`];
 }
 
 // A file inside the library, or null. Symlinks out of the library count as outside.
@@ -184,17 +196,25 @@ function drainThenClose(req) {
   req.resume();
 }
 
-const hasToken = (state, req) => sameToken(req.headers[TOKEN_HEADER], state.token);
+// The per-run token, or a paired device's token.
+const hasToken = (state, req) => sameToken(req.headers[TOKEN_HEADER], state.token) || isDeviceToken(state.home, req.headers[TOKEN_HEADER]);
 
 // Every write: right origin, right token, JSON, under the size cap.
 // Returns the body text, or null once it has replied with the refusal.
-async function writeBody(state, req, res, max) {
+// Pairing has no token yet: it proves itself with the pair header and a
+// same-origin fetch instead.
+async function writeBody(state, req, res, max, { pairing = false } = {}) {
   const refuse = (status, error) => {
     fail(res, status, error);
     return null;
   };
   if (!allowedOrigins(state.port).includes(req.headers.origin)) return refuse(403, 'wrong origin');
-  if (!hasToken(state, req)) return refuse(403, 'wrong or missing token');
+  if (pairing) {
+    if (req.headers[PAIR_HEADER] !== '1') return refuse(403, `missing ${PAIR_HEADER}: 1`);
+    if (req.headers['sec-fetch-site'] !== 'same-origin') return refuse(403, 'pairing must be a same-origin fetch');
+  } else if (!hasToken(state, req)) {
+    return refuse(403, 'wrong or missing token');
+  }
   if (!/^application\/json\b/i.test(req.headers['content-type'] || '')) return refuse(415, 'send application/json');
   const raw = await readBody(req, max);
   if (raw === ABORTED) {
@@ -209,6 +229,33 @@ async function writeBody(state, req, res, max) {
     return null;
   }
   return raw;
+}
+
+async function pairDevice(state, req, res) {
+  const raw = await writeBody(state, req, res, 1024, { pairing: true });
+  if (raw === null) return undefined;
+  let code;
+  try {
+    ({ code } = JSON.parse(raw));
+  } catch {
+    return fail(res, 400, 'body is not JSON');
+  }
+  try {
+    return sendJson(res, 200, { token: redeemPairCode(state.home, code, { now: state.now }) });
+  } catch (error) {
+    return fail(res, 403, error.message);
+  }
+}
+
+// The pages a service worker may keep for offline reading, and nothing else.
+function pageList(state, res) {
+  const { manifest } = readManifest(state.home);
+  return sendJson(res, 200, { updatedAt: manifest.updatedAt, pages: manifest.explainers.map((e) => `explainers/${e.slug}/index.html`) });
+}
+
+function serveApp(route, req, res) {
+  res.writeHead(200, { ...SAFE_HEADERS, 'content-security-policy': route.csp, 'content-type': route.type });
+  return res.end(req.method === 'HEAD' ? undefined : route.body);
 }
 
 function exportBundle(state, url, res) {
@@ -273,7 +320,14 @@ async function saveConfig(state, req, res) {
 function handler(state) {
   return (req, res) => {
     const { port } = state;
-    if (![`${HOST}:${port}`, `localhost:${port}`].includes(req.headers.host)) return fail(res, 403, 'wrong host');
+    state.lastActivity = state.now();
+    // No CORS, ever: a preflight is refused before anything else.
+    if (req.method === 'OPTIONS') return fail(res, 405, 'no cross-origin requests');
+    if (req.headers.host === `localhost:${port}`) {
+      res.writeHead(308, { ...SAFE_HEADERS, location: `http://${HOST}:${port}${req.url.startsWith('/') ? req.url : '/'}` });
+      return res.end();
+    }
+    if (req.headers.host !== `${HOST}:${port}`) return fail(res, 403, 'wrong host');
     let url;
     try {
       url = new URL(req.url, `http://${HOST}:${port}`);
@@ -281,6 +335,11 @@ function handler(state) {
       return fail(res, 400, 'bad url');
     }
     const failed = (error) => fail(res, 500, `${url.pathname} failed: ${error.message}`);
+    if (url.pathname === '/api/health') {
+      return req.method === 'GET' ? sendJson(res, 200, { app: APP_NAME, version: VERSION, instance: state.instance }) : fail(res, 405, 'use GET');
+    }
+    if (url.pathname === '/api/pages') return req.method === 'GET' ? pageList(state, res) : fail(res, 405, 'use GET');
+    if (url.pathname === PAIR_PATH) return req.method === 'POST' ? pairDevice(state, req, res).catch(failed) : fail(res, 405, 'use POST');
     if (url.pathname === CONFIG_PATH) {
       if (req.method === 'GET') return hasToken(state, req) ? sendJson(res, 200, { config: readConfig(state.home) }) : fail(res, 403, 'wrong or missing token');
       if (req.method === 'POST') return saveConfig(state, req, res).catch(failed);
@@ -296,28 +355,59 @@ function handler(state) {
     }
     if (url.pathname.startsWith('/api/')) return fail(res, 404, 'not found');
     if (req.method !== 'GET' && req.method !== 'HEAD') return fail(res, 405, 'read only');
+    const app = appRoute(url.pathname);
+    if (app) return serveApp(app, req, res);
     return serveFile(state.root, url, req, res);
   };
 }
 
 /**
- * Serve the library until closed.
- * @param {{ home: string, port?: number, lockWaitMs?: number }} options lockWaitMs: how long a write waits for the library lock before 503
- * @returns {Promise<{ server: import('node:http').Server, port: number, token: string, url: string, close: () => Promise<void> }>}
+ * Serve the library until closed, or until idle.
+ * @param {{ home: string, port?: number, lockWaitMs?: number, idleMinutes?: number, now?: () => number, idleCheckMs?: number, writeState?: boolean }} options
+ *   lockWaitMs: how long a write waits for the library lock before 503.
+ *   idleMinutes: stop after this long with no request (0 = never). writeState: record
+ *   <home>/.serve/server.json while running, for `launch`.
+ * @returns {Promise<{ server, port, token, instance, url, close: () => Promise<void>, stopped: Promise<void> }>}
  */
-export function startLibraryServer({ home, port = 0, lockWaitMs = SERVE_LOCK_WAIT_MS }) {
-  const state = { home, root: realpathSync(home), token: randomBytes(24).toString('hex'), port: 0, lockWaitMs };
+export function startLibraryServer({
+  home, port = 0, lockWaitMs = SERVE_LOCK_WAIT_MS, idleMinutes = 0, now = Date.now, idleCheckMs = 30000, writeState = false,
+}) {
+  const state = {
+    home, root: realpathSync(home), token: randomBytes(24).toString('hex'), instance: randomBytes(12).toString('hex'),
+    port: 0, now, lastActivity: now(), lockWaitMs,
+  };
   const server = createServer(handler(state));
+  let timer = null;
+  let markStopped;
+  const stopped = new Promise((r) => { markStopped = r; });
+  const close = () => new Promise((closed) => {
+    if (timer) clearInterval(timer);
+    clearServerState(home, state.instance);
+    if (!server.listening) { closed(); markStopped(); return; }
+    server.close(() => { closed(); markStopped(); });
+    server.closeIdleConnections?.();
+  });
   return new Promise((done, reject) => {
-    server.once('error', (error) => reject(new Error(`serve on ${HOST}:${port}: ${error.message}`)));
+    server.once('error', (error) => reject(new Error(`serve on ${HOST}:${port}: ${error.code || error.message}`)));
     server.listen(port, HOST, () => {
       state.port = server.address().port;
+      if (writeState) {
+        writeServerState(home, { pid: process.pid, port: state.port, instance: state.instance, version: VERSION, startedAt: new Date(now()).toISOString(), idleMinutes });
+      }
+      if (idleMinutes > 0) {
+        timer = setInterval(() => {
+          if (state.now() - state.lastActivity >= idleMinutes * 60000) close();
+        }, idleCheckMs);
+        timer.unref();
+      }
       done({
         server,
         port: state.port,
         token: state.token,
+        instance: state.instance,
         url: `http://${HOST}:${state.port}/index.html#token=${state.token}`,
-        close: () => new Promise((closed) => server.close(() => closed())),
+        close,
+        stopped,
       });
     });
   });
