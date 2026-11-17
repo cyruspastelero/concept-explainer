@@ -240,11 +240,16 @@ async function pairDevice(state, req, res) {
   } catch {
     return fail(res, 400, 'body is not JSON');
   }
+  // Redeem under the library lock without blocking: a busy library answers
+  // 503 before the one-time code is used up.
+  let token;
   try {
-    return sendJson(res, 200, { token: redeemPairCode(state.home, code, { now: state.now }) });
+    token = await whenFree(res, state.home, () => redeemPairCode(state.home, code, { now: state.now }), state.lockWaitMs);
   } catch (error) {
     return fail(res, 403, error.message);
   }
+  if (token === BUSY) return undefined;
+  return sendJson(res, 200, { token });
 }
 
 // The pages a service worker may keep for offline reading, and nothing else.

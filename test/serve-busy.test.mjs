@@ -74,3 +74,32 @@ test('a write while another process holds the lock gets 503, and the server keep
     await served.close();
   }
 });
+
+test('pairing while the library is busy gets 503 without blocking, and the code still works after', async () => {
+  const { createPairCode } = await import('../scripts/lib/pairing.mjs');
+  const { PAIR_HEADER } = await import('../scripts/lib/serve-state.mjs');
+  const home = mkdtempSync(join(tmpdir(), 'rx-serve-busy-pair-'));
+  publishExplainer(taskflow, { home });
+  const served = await startLibraryServer({ home, port: 0, lockWaitMs: 300 });
+  try {
+    const code = createPairCode(home);
+    const pair = () => send(served.port, {
+      method: 'POST', path: '/api/pair', body: JSON.stringify({ code }),
+      headers: { origin: `http://127.0.0.1:${served.port}`, 'content-type': 'application/json', [PAIR_HEADER]: '1', 'sec-fetch-site': 'same-origin' },
+    });
+    const { exited } = await holdLock(home, 1200);
+    const pairing = pair();
+    await pause(100);
+    const page = await send(served.port, { path: '/index.html' });
+    const busy = await pairing;
+    assert.equal(page.status, 200);
+    assert.ok(page.at < busy.at, 'the server keeps serving while pairing waits');
+    assert.equal(busy.status, 503);
+    await exited;
+    const paired = await pair();
+    assert.equal(paired.status, 200, 'a busy library did not use up the one-time code');
+    assert.match(JSON.parse(paired.body).token, /^[0-9a-f]{64}$/);
+  } finally {
+    await served.close();
+  }
+});
