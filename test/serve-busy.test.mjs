@@ -103,3 +103,34 @@ test('pairing while the library is busy gets 503 without blocking, and the code 
     await served.close();
   }
 });
+
+test('reader signals while the library is busy get 503 without blocking, and land on a retry', async () => {
+  const { SIGNALS_FORMAT } = await import('../scripts/lib/signals.mjs');
+  const { buildHash, sectionsFor } = await import('../scripts/lib/sections.mjs');
+  const home = mkdtempSync(join(tmpdir(), 'rx-serve-busy-signals-'));
+  publishExplainer(taskflow, { home });
+  const served = await startLibraryServer({ home, port: 0, lockWaitMs: 300 });
+  try {
+    const body = JSON.stringify({
+      format: SIGNALS_FORMAT, version: 1, batchId: '0'.repeat(31) + '1', date: '2026-11-18',
+      explainers: [{ key: 'acme-taskflow', build: buildHash(taskflow), sections: { 'concepts/1': { fp: sectionsFor(taskflow)['concepts/1'], vote: { from: null, to: 'more' }, views: 1, finished: 1, time: '2-10m' } }, quiz: {}, lookups: { glossary: {}, hints: {} } }],
+    });
+    const post = () => send(served.port, {
+      method: 'POST', path: '/api/signals', body,
+      headers: { origin: `http://127.0.0.1:${served.port}`, 'content-type': 'application/json', [TOKEN_HEADER]: served.token },
+    });
+    const { exited } = await holdLock(home, 1200);
+    const sending = post();
+    await pause(100);
+    const page = await send(served.port, { path: '/index.html' });
+    const busy = await sending;
+    assert.equal(page.status, 200);
+    assert.ok(page.at < busy.at, 'the server keeps serving while signals wait');
+    assert.equal(busy.status, 503);
+    await exited;
+    const sent = await post();
+    assert.equal(sent.status, 200, sent.body);
+  } finally {
+    await served.close();
+  }
+});

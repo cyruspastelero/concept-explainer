@@ -266,7 +266,9 @@ async function receiveSignals(state, req, res) {
   } catch (error) {
     return fail(res, 400, error.message);
   }
-  const result = mergeSignals(state.home, batch);
+  // Merged under the library lock without blocking the server; a busy library is 503, so the sender keeps the batch and retries.
+  const result = await whenFree(res, state.home, () => mergeSignals(state.home, batch), state.lockWaitMs);
+  if (result === BUSY) return undefined;
   return sendJson(res, 200, { ok: true, ...result });
 }
 

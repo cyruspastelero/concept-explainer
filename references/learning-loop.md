@@ -70,7 +70,7 @@ At most 64 KB, 50 explainers, 500 sections and 50 quiz items each. Unknown field
 
 ### Sending
 
-- **Under serve:** `POST /api/signals` with `X-Concept-Explainer-Token` (per-run or device token), `Content-Type: application/json`, the batch as the body. Send on page hide (`fetch` with `keepalive`) and from Settings "Send now". `200 { ok, duplicate, merged: [slug], dropped: { explainers, sections, quiz, lookups } }`: clear the pending deltas only now. A repeated `batchId` answers `duplicate: true` and changes nothing (the last 500 are kept). `400 { error: "signals: ..." }` bad batch, `403` token, origin or "learning is off", `413` over 64 KB, `415` not JSON.
+- **Under serve:** `POST /api/signals` with `X-Concept-Explainer-Token` (per-run or device token), `Content-Type: application/json`, the batch as the body. Send on page hide (`fetch` with `keepalive`) and from Settings "Send now". `200 { ok, duplicate, merged: [slug], dropped: { explainers, sections, quiz, lookups } }`: clear the pending deltas only now. A repeated `batchId` answers `duplicate: true` and changes nothing (the last 500 are kept). `400 { error: "signals: ..." }` bad batch, `403` token, origin or "learning is off", `413` over 64 KB, `415` not JSON, `503 { error: "library is busy" }` when another writer holds the library for more than 2 seconds: keep the deltas and send again later.
 - **From file://:** Settings > Reading > "Send feedback to the library" shows exactly what goes, offers "Download feedback file" (`<key>.signals.json`, the same batch), and the command to copy: `concept-explainer insights import <file>`. Same checks and dedupe.
 
 ## Library memory
