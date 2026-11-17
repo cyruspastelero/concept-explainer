@@ -84,7 +84,8 @@ function spawnServer({ home, port, idleMinutes, nodePath, binPath }) {
     const child = spawn(nodePath, [binPath, 'library', 'serve', '--port', String(port), '--idle', String(idleMinutes)], {
       detached: true,
       stdio: ['ignore', fd, fd],
-      env: { ...process.env, CONCEPT_EXPLAINER_HOME: home },
+      // LAUNCHED marks the server as the launcher's, so uninstall --launcher may stop it.
+      env: { ...process.env, CONCEPT_EXPLAINER_HOME: home, CONCEPT_EXPLAINER_LAUNCHED: '1' },
       windowsHide: true,
     });
     child.unref();

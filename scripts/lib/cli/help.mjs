@@ -28,10 +28,15 @@ Library (home: $CONCEPT_EXPLAINER_HOME, else ~/.concept-explainer)
   library rebuild                  Re-render every page, the hub and the kit with the current template
   library open                     Open the hub in your browser
   library style [clean|playful]    Print or set the default style
-  library serve [--port n]         Serve the library on 127.0.0.1 so Settings can save (Ctrl+C stops)
+  library serve [--port n] [--idle m] [--forget-devices]
+                                   Serve the library on 127.0.0.1 (default port 4747) so pages can save and install as an app
+  launch                           Start the server if needed, pair this browser and open the hub (what the app icon runs)
   export [slug...] [--out f]       Share as a data-only bundle (--type, --tag, --stack, --search; none = all)
   import <file> [--dry-run]        Add a bundle (--on-conflict rename|skip|replace, default rename)
   install [--force]                Link this skill into Claude and add the library rule
+  install --launcher [--node p] [--launcher-dir d] [--force]
+                                   Add an app icon (macOS app, Linux menu entry, Windows Start Menu) that runs launch
+  uninstall --launcher             Remove the app icon and stop the server it started
 
 Config (saved in <home>/config.json)
   config                           Print every setting
@@ -50,5 +55,6 @@ Options
   --json         Machine-readable output          --open      open the built file
   --style        clean or playful                 --no-library  build without publishing
   --port         Port for library serve           --force     install: replace (keeps a backup)
+  --home         Library folder for this run      --idle      serve: stop after this many idle minutes (0 = never)
   --tag, --stack, --search  export selectors      --on-conflict, --dry-run  import options
 `;

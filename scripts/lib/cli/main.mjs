@@ -27,6 +27,7 @@ const OPTIONS = {
   idle: { type: 'string' },
   node: { type: 'string' },
   'launcher-dir': { type: 'string' },
+  home: { type: 'string' },
   'forget-devices': { type: 'boolean' },
   launcher: { type: 'boolean' },
   tag: { type: 'string' },
@@ -67,6 +68,8 @@ export async function main(argv) {
   }
   const run = COMMANDS[command];
   if (!run) throw new UsageError(`unknown command "${command}". Run \`concept-explainer --help\``);
+  // --home picks the library for this run (the launcher bakes it in).
+  if (values.home) process.env.CONCEPT_EXPLAINER_HOME = resolve(values.home);
   if (usesLibrary(command, values)) {
     try {
       const moved = migrateLegacyHome();

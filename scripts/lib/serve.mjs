@@ -398,6 +398,7 @@ export function startLibraryServer({
       if (writeState) {
         writeServerState(home, {
           pid: process.pid, port: state.port, instance: state.instance, secret: state.secret, version: VERSION, startedAt: new Date(now()).toISOString(), idleMinutes,
+          launched: process.env.CONCEPT_EXPLAINER_LAUNCHED === '1',
         });
       }
       if (idleMinutes > 0) {

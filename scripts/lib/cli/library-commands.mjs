@@ -9,6 +9,8 @@ import { localDay, today } from '../dates.mjs';
 import { startOrReuse } from '../serve-state.mjs';
 import { createPairCode, forgetDevices } from '../pairing.mjs';
 import { launch } from '../launch.mjs';
+import { installLauncher, uninstallLauncherAsync } from '../launcher.mjs';
+import { readFileSync as readPackage } from 'node:fs';
 import { applyImport, createBundle, planImport, readBundleFile } from '../bundle.mjs';
 import { openPath } from '../open.mjs';
 import { validateExplainer } from '../validate.mjs';
@@ -37,6 +39,16 @@ export function publish(data, file, opts, style) {
   if (result.recovered) err('  ⚠ library.json was corrupt; it was backed up and rebuilt\n');
   err(`✔ ${result.updated ? 'updated' : 'added'} ${result.slug} in the library\n  page: ${result.pagePath}\n  library: ${result.hubPath}\n`);
   return result;
+}
+
+function installLauncherCommand(opts) {
+  const { version } = JSON.parse(readPackage(new URL('../../../package.json', import.meta.url), 'utf8'));
+  const result = asUsage(() => installLauncher({
+    home: home(), nodePath: opts.node, targetDir: opts['launcher-dir'], force: Boolean(opts.force), version,
+  }));
+  result.files.forEach((path) => err(`✔ wrote ${path}\n`));
+  result.warnings.forEach((w) => err(`  ⚠ ${w}\n`));
+  err('  click it to open your library; it starts the server and stops it after 30 idle minutes\n');
 }
 
 const LIBRARY = {
@@ -182,8 +194,19 @@ export const LIBRARY_COMMANDS = {
   },
 
   install(_positionals, opts, context) {
+    if (opts.launcher) return installLauncherCommand(opts);
     const actions = asUsage(() => installSkill({ skillDir: context.skillDir, configDir: resolveConfigDir(), force: Boolean(opts.force) }));
     actions.forEach((line) => err(`✔ ${line}\n`));
     err(`  library: ${libraryPaths(home()).hub}\n`);
+    return undefined;
   },
+
+  async uninstall(_positionals, opts) {
+    if (!opts.launcher) throw new UsageError('uninstall needs --launcher (the skill and rule are removed by hand)');
+    const result = await uninstallLauncherAsync({ home: home() });
+    result.removed.forEach((path) => err(`✔ removed ${path}\n`));
+    result.kept.forEach((path) => err(`  ⚠ kept ${path}: it changed since install\n`));
+    if (result.stopped) err('✔ stopped the library server the launcher started\n');
+  },
+
 };
