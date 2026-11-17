@@ -31,6 +31,8 @@ export const CONFIG_DEFAULTS = Object.freeze({
   servePort: null,
   serveIdleMinutes: null,
   deviceTokenDays: 30,
+  // The learning loop: reader signals and agent notes. Off = nothing recorded, read or written.
+  learning: true,
 });
 
 export const CONFIG_KEYS = Object.keys(CONFIG_DEFAULTS);
@@ -46,7 +48,7 @@ const ENUMS = Object.freeze({
 });
 /** The allowed values of each choice setting. */
 export const CONFIG_ENUMS = ENUMS;
-const BOOLEANS = ['quiz', 'analogies', 'confirmBeforeStart'];
+const BOOLEANS = ['quiz', 'analogies', 'confirmBeforeStart', 'learning'];
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const quote = (value) => JSON.stringify(value);

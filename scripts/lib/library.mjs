@@ -298,6 +298,8 @@ function removeUnlocked(slug, options) {
   const { manifest } = readManifest(home);
   if (!manifest.explainers.some((e) => e.slug === slug)) throw new Error(`remove explainer: no explainer "${slug}" in ${home}`);
   rmSync(paths.dirFor(slug), { recursive: true, force: true });
+  // What readers told us about it goes with it.
+  rmSync(join(home, 'insights', `${slug}.json`), { force: true });
   const next = withoutEntry(manifest, slug, now());
   writeAtomic(paths.manifest, toJson(next));
   writeHub(home, next, options);
