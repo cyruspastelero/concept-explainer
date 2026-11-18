@@ -9,6 +9,7 @@ import {
 
 const freshHome = () => join(mkdtempSync(join(tmpdir(), 'rx-pair-')), 'home');
 const mode = (path) => statSync(path).mode & 0o777;
+const posixModes = process.platform !== 'win32';
 
 test('a pairing code is stored only as a hash, in a private folder, and expires in 120 s', () => {
   const home = freshHome();
@@ -20,9 +21,11 @@ test('a pairing code is stored only as a hash, in a private folder, and expires 
   assert.doesNotMatch(stored, new RegExp(secret));
   assert.equal(JSON.parse(stored).expiresAt, 1000 + PAIR_TTL_MS);
   assert.equal(PAIR_TTL_MS, 120000);
-  assert.equal(mode(serveDir(home)), 0o700);
-  assert.equal(mode(join(serveDir(home), 'pair')), 0o700);
-  assert.equal(mode(file), 0o600);
+  if (posixModes) {
+    assert.equal(mode(serveDir(home)), 0o700);
+    assert.equal(mode(join(serveDir(home), 'pair')), 0o700);
+    assert.equal(mode(file), 0o600);
+  }
 });
 
 test('a code works once and returns a device token stored only as its hash', () => {
@@ -33,7 +36,7 @@ test('a code works once and returns a device token stored only as its hash', () 
   assert.equal(isDeviceToken(home, token), true);
   assert.equal(isDeviceToken(home, 'f'.repeat(64)), false);
   assert.doesNotMatch(readFileSync(join(serveDir(home), 'devices.json'), 'utf8'), new RegExp(token));
-  assert.equal(mode(join(serveDir(home), 'devices.json')), 0o600);
+  if (posixModes) assert.equal(mode(join(serveDir(home), 'devices.json')), 0o600);
   assert.throws(() => redeemPairCode(home, code), /pair: code is unknown, used or expired/);
   assert.deepEqual(readdirSync(join(serveDir(home), 'pair')), [], 'used codes are deleted');
 });

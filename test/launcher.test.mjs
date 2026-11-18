@@ -12,7 +12,7 @@ import { readConfig } from '../scripts/lib/library.mjs';
 // Paths with every character that breaks naive quoting.
 const TRICKY = "it's $HOME 100% \"real\" `x`";
 
-function setup({ safe = false } = {}) {
+function setup({ safe = process.platform === 'win32' } = {}) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'rx-launcher-')));
   const odd = join(root, safe ? 'plain-folder' : TRICKY);
   mkdirSync(odd, { recursive: true });
@@ -115,7 +115,7 @@ test('every written path and its hash are recorded, privately; installing again 
   const s = setup();
   installLauncher({ home: s.home, platform: 'linux', targetDir: s.target, nodePath: s.nodePath, binPath: s.binPath, run: () => {} });
   const recordPath = join(s.home, '.serve', 'launcher.json');
-  assert.equal(statSync(recordPath).mode & 0o777, 0o600);
+  if (process.platform !== 'win32') assert.equal(statSync(recordPath).mode & 0o777, 0o600);
   const record = JSON.parse(readFileSync(recordPath, 'utf8'));
   assert.equal(record.files.length, 2);
   record.files.forEach((f) => assert.equal(f.sha256, sha(f.path)));

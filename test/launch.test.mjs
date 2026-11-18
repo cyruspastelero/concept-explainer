@@ -61,7 +61,7 @@ test('launch starts one detached server, waits for health, pairs and opens the h
     assert.notEqual(opened[1], opened[0], 'every launch gets a fresh code');
     const log = join(home, '.serve', 'serve.log');
     assert.ok(existsSync(log));
-    assert.equal(statSync(log).mode & 0o777, 0o600);
+    if (process.platform !== 'win32') assert.equal(statSync(log).mode & 0o777, 0o600);
     assert.doesNotMatch(readFileSync(log, 'utf8'), /#token=/, 'the per-run token is not logged');
   } finally {
     await stop(home);
