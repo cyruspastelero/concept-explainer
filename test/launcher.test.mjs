@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -28,7 +29,7 @@ function setup({ safe = process.platform === 'win32' } = {}) {
   return { root, home, binPath, nodePath, argsOut, target: join(root, 'target dir') };
 }
 
-const sha = (path) => execFileSync('shasum', ['-a', '256', path], { encoding: 'utf8' }).split(' ')[0];
+const sha = (path) => createHash('sha256').update(readFileSync(path)).digest('hex');
 
 test('shQuote and desktopExec quote every hostile character', () => {
   assert.equal(shQuote("a'b"), "'a'\\''b'");
