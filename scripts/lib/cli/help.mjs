@@ -35,7 +35,7 @@ Library (home: $CONCEPT_EXPLAINER_HOME, else ~/.concept-explainer)
   export [slug...] [--out f]       Share as a data-only bundle (--type, --tag, --stack, --search; none = all)
   import <file> [--dry-run]        Add a bundle (--on-conflict rename|skip|replace, default rename)
   install [--force]                Link this skill into Claude and add the library rule
-  install --launcher [--node p] [--launcher-dir d] [--force]
+  install --launcher [--node p] [--launcher-dir d] [--force] [--pwa]
                                    Add an app icon (macOS app, Linux menu entry, Windows Start Menu) that runs launch
   uninstall --launcher             Remove the app icon and stop the server it started
 
@@ -56,6 +56,7 @@ Options
   --json         Machine-readable output          --open      open the built file
   --style        clean or playful                 --no-library  build without publishing
   --port         Port for library serve           --force     install: replace (keeps a backup)
+  --pwa          install --launcher: enable the installable app on shared machines
   --home         Library folder for this run      --idle      serve: stop after this many idle minutes (0 = never)
   --tag, --stack, --search  export selectors      --on-conflict, --dry-run  import options
 `;

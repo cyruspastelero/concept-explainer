@@ -3,17 +3,18 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import {
-  BUNDLE_ID, POWERSHELL_SCRIPT, desktopExec, installLauncher, shQuote, uninstallLauncher,
+  BUNDLE_ID, POWERSHELL_SCRIPT, desktopExec, hasOtherLoginAccounts, installLauncher, shQuote, uninstallLauncher, windowsSystemPath,
 } from '../scripts/lib/launcher.mjs';
+import { readConfig } from '../scripts/lib/library.mjs';
 
 // Paths with every character that breaks naive quoting.
 const TRICKY = "it's $HOME 100% \"real\" `x`";
 
-function setup() {
+function setup({ safe = false } = {}) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'rx-launcher-')));
-  const odd = join(root, TRICKY);
+  const odd = join(root, safe ? 'plain-folder' : TRICKY);
   mkdirSync(odd, { recursive: true });
   const home = join(odd, 'home');
   const binPath = join(odd, 'bin', 'concept-explainer.mjs');
@@ -38,7 +39,11 @@ test('shQuote and desktopExec quote every hostile character', () => {
 
 test('macOS: an app bundle with our bundle id, a 0755 script that passes paths exactly', { skip: process.platform === 'win32' }, () => {
   const s = setup();
-  const result = installLauncher({ home: s.home, platform: 'darwin', targetDir: s.target, nodePath: s.nodePath, binPath: s.binPath, run: () => { throw new Error('no sips here'); } });
+  const commands = [];
+  const result = installLauncher({
+    home: s.home, platform: 'darwin', targetDir: s.target, nodePath: s.nodePath, binPath: s.binPath,
+    run: (command, args) => commands.push({ command, args }),
+  });
   const app = join(s.target, 'Concept Explainer.app');
   const plist = readFileSync(join(app, 'Contents', 'Info.plist'), 'utf8');
   assert.match(plist, new RegExp(`<key>CFBundleIdentifier</key>\\s*<string>${BUNDLE_ID.replace(/\./g, '\\.')}</string>`));
@@ -52,6 +57,9 @@ test('macOS: an app bundle with our bundle id, a 0755 script that passes paths e
   assert.deepEqual(readFileSync(s.argsOut, 'utf8').trimEnd().split('\n'), [s.binPath, 'launch', '--home', s.home]);
   assert.match(result.warnings.join(' '), /icon/, 'a failed icon is a warning, not an error');
   assert.ok(!existsSync(join(app, 'Contents', 'Resources', 'AppIcon.icns')));
+  const iconutil = commands.find(({ command }) => command === 'iconutil');
+  assert.ok(iconutil);
+  assert.ok(!existsSync(dirname(iconutil.args[4])), 'temporary icon folder is cleaned up');
 });
 
 test('macOS: the script shows an alert and stops when node or the CLI moved', { skip: process.platform === 'win32' }, () => {
@@ -76,14 +84,14 @@ test('Linux: a desktop entry with spec quoting and a 512 px icon', () => {
 });
 
 test('Windows: a Start Menu shortcut made by a constant PowerShell script, paths only in env', () => {
-  const s = setup();
+  const s = setup({ safe: true });
   const calls = [];
   installLauncher({
     home: s.home, platform: 'win32', targetDir: s.target, nodePath: s.nodePath, binPath: s.binPath,
     env: { LOCALAPPDATA: join(s.root, 'local') }, run: (cmd, args, opts) => calls.push({ cmd, args, env: opts.env }),
   });
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].cmd, 'powershell.exe');
+  assert.equal(calls[0].cmd, windowsSystemPath('powershell'));
   assert.deepEqual(calls[0].args, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', POWERSHELL_SCRIPT]);
   [s.nodePath, s.binPath, s.home].forEach((p) => assert.ok(!POWERSHELL_SCRIPT.includes(p)));
   assert.equal(calls[0].env.CE_LNK, join(s.target, 'Concept Explainer.lnk'));
@@ -94,7 +102,7 @@ test('Windows: a Start Menu shortcut made by a constant PowerShell script, paths
 });
 
 test('Windows: if PowerShell fails, install stops, writes no .cmd and records nothing', () => {
-  const s = setup();
+  const s = setup({ safe: true });
   assert.throws(() => installLauncher({
     home: s.home, platform: 'win32', targetDir: s.target, nodePath: s.nodePath, binPath: s.binPath,
     env: { LOCALAPPDATA: join(s.root, 'local') }, run: () => { throw new Error('denied'); },
@@ -149,6 +157,60 @@ test('uninstall removes exactly the recorded files whose hash still matches', ()
   assert.ok(result.kept.includes(icon));
   assert.ok(!existsSync(join(s.home, '.serve', 'launcher.json')));
   assert.throws(() => uninstallLauncher({ home: s.home }), /no launcher is installed/);
+});
+
+test('uninstall keeps un-fingerprinted and unexpected recorded paths', () => {
+  const s = setup();
+  installLauncher({ home: s.home, platform: 'linux', targetDir: s.target, nodePath: s.nodePath, binPath: s.binPath, run: () => {} });
+  const outside = join(s.root, 'not-ours.txt');
+  writeFileSync(outside, 'keep');
+  const unexpected = join(s.root, 'other.txt');
+  writeFileSync(unexpected, 'also keep');
+  const recordPath = join(s.home, '.serve', 'launcher.json');
+  const record = JSON.parse(readFileSync(recordPath, 'utf8'));
+  record.files.push({ path: outside, sha256: null });
+  record.files.push({ path: unexpected, sha256: 'a'.repeat(64) });
+  writeFileSync(recordPath, JSON.stringify(record));
+  const result = uninstallLauncher({ home: s.home });
+  assert.ok(existsSync(outside), 'a path without a fingerprint is kept');
+  assert.ok(result.kept.includes(outside));
+  assert.ok(result.kept.includes(unexpected), 'a path outside the launcher folders is kept');
+});
+
+test('shared profiles default the PWA off; --pwa opts in and repeats the warning', () => {
+  const s = setup();
+  const accounts = join(s.root, 'accounts');
+  mkdirSync(join(accounts, 'current'), { recursive: true });
+  mkdirSync(join(accounts, 'other'), { recursive: true });
+  const opts = {
+    home: s.home, platform: 'darwin', targetDir: s.target, nodePath: s.nodePath, binPath: s.binPath,
+    homeDir: join(accounts, 'current'), sharedMachine: true, run: () => {},
+  };
+  const off = installLauncher(opts);
+  assert.equal(readConfig(s.home).pwa, false);
+  assert.match(off.warnings.join(' '), /off.*--pwa/);
+  const on = installLauncher({ ...opts, pwa: true, force: true });
+  assert.equal(readConfig(s.home).pwa, true);
+  assert.match(on.warnings.join(' '), /--pwa enables/);
+});
+
+test('other profile detection ignores the current account and system profiles', () => {
+  const root = mkdtempSync(join(tmpdir(), 'rx-profiles-'));
+  mkdirSync(join(root, 'current'));
+  mkdirSync(join(root, 'Shared'));
+  assert.equal(hasOtherLoginAccounts({ platform: 'darwin', homeDir: join(root, 'current'), roots: [root] }), false);
+  mkdirSync(join(root, 'someone-else'));
+  assert.equal(hasOtherLoginAccounts({ platform: 'darwin', homeDir: join(root, 'current'), roots: [root] }), true);
+});
+
+test('Windows refuses paths with shell and command separators', () => {
+  const s = setup();
+  const unsafe = join(s.root, 'unsafe&folder');
+  mkdirSync(unsafe);
+  assert.throws(() => installLauncher({
+    home: s.home, platform: 'win32', targetDir: unsafe, nodePath: s.nodePath, binPath: s.binPath,
+    env: { LOCALAPPDATA: join(s.root, 'local') }, run: () => {},
+  }), /risky Windows character/);
 });
 
 test('a node from a version manager folder gets a warning that suggests --node', () => {

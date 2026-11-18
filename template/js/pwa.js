@@ -110,14 +110,14 @@ function startPage(start) {
 }
 
 // ---------- Offline ----------
-// The worker never caches /api/*, so a failed health check means the server
+// The worker never caches /api/*, so a failed page-list check means the server
 // is stopped: say so once, and switch off everything that writes.
 function watchServer() {
   if (!isServedOrigin()) return;
   const controller = 'AbortController' in window ? new AbortController() : null;
   const timer = controller ? window.setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS) : null;
-  fetch('/api/health', { cache: 'no-store', signal: controller ? controller.signal : undefined })
-    .then((response) => { if (!response.ok) throw new Error(`health ${response.status}`); })
+  fetch('/api/pages', { cache: 'no-store', signal: controller ? controller.signal : undefined })
+    .then((response) => { if (!response.ok) throw new Error(`pages ${response.status}`); })
     .catch(() => markOffline())
     .finally(() => { if (timer) window.clearTimeout(timer); });
 }

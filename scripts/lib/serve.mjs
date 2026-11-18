@@ -9,8 +9,8 @@ import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { extname, join, resolve, sep } from 'node:path';
 import { readConfig, readManifest, rebuildLibrary, withLibraryLock, writeConfig } from './library.mjs';
 import { appRoute } from './app-routes.mjs';
-import { isDeviceToken, redeemPairCode, sweepOpenFiles } from './pairing.mjs';
-import { APP_NAME, PAIR_HEADER, clearServerState, healthProof, writeServerState } from './serve-state.mjs';
+import { endSessions, isDeviceToken, redeemPairCode, sweepOpenFiles } from './pairing.mjs';
+import { PAIR_HEADER, clearServerState, healthProof, writeServerState } from './serve-state.mjs';
 import { MAX_BUNDLE_BYTES, applyImport, createBundle, parseBundle, planImport } from './bundle.mjs';
 import { SLUG_PATTERN } from './library-model.mjs';
 import { pageCspFrom } from './build.mjs';
@@ -30,6 +30,7 @@ const VERSION = (() => {
   }
 })();
 const MAX_CONFIG_BODY = 64 * 1024;
+export const CLI_ONLY_SETTINGS = ['servePort', 'serveIdleMinutes', 'deviceTokenDays', 'pwa'];
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -198,7 +199,7 @@ function drainThenClose(req) {
 }
 
 // The per-run token, or a paired device's token.
-const hasToken = (state, req) => sameToken(req.headers[TOKEN_HEADER], state.token) || isDeviceToken(state.home, req.headers[TOKEN_HEADER]);
+const hasToken = (state, req) => sameToken(req.headers[TOKEN_HEADER], state.token) || isDeviceToken(state.home, req.headers[TOKEN_HEADER], { instance: state.instance });
 
 // Every write: right origin, right token, JSON, under the size cap.
 // Returns the body text, or null once it has replied with the refusal.
@@ -245,7 +246,7 @@ async function pairDevice(state, req, res) {
   // 503 before the one-time code is used up.
   let token;
   try {
-    token = await whenFree(res, state.home, () => redeemPairCode(state.home, code, { now: state.now }), state.lockWaitMs);
+    token = await whenFree(res, state.home, () => redeemPairCode(state.home, code, { now: state.now, instance: state.instance }), state.lockWaitMs);
   } catch (error) {
     return fail(res, 403, error.message);
   }
@@ -308,6 +309,9 @@ async function saveConfig(state, req, res) {
     return fail(res, 400, 'body is not JSON');
   }
   if (!changes || typeof changes !== 'object' || Array.isArray(changes)) return fail(res, 400, 'body must be a JSON object of settings');
+  // What the server itself runs on is set from the command line only, never by a page.
+  const cliOnly = Object.keys(changes).filter((key) => CLI_ONLY_SETTINGS.includes(key));
+  if (cliOnly.length) return fail(res, 400, `${cliOnly.join(', ')}: change ${cliOnly.length === 1 ? 'it' : 'them'} with \`concept-explainer config set\`, not from a page`);
   let config;
   const saved = await whenFree(res, home, () => {
     try {
@@ -341,13 +345,11 @@ function handler(state) {
       return fail(res, 400, 'bad url');
     }
     const failed = (error) => fail(res, 500, `${url.pathname} failed: ${error.message}`);
-    if (url.pathname === '/api/health') {
-      if (req.method !== 'GET') return fail(res, 405, 'use GET');
-      // With ?nonce=, prove this is the server server.json describes (see verifyServer).
-      const nonce = url.searchParams.get('nonce');
-      const proof = nonce && /^[0-9a-f]{32}$/.test(nonce) ? { proof: healthProof(state.secret, nonce) } : {};
-      return sendJson(res, 200, { app: APP_NAME, version: VERSION, instance: state.instance, ...proof });
-    }
+    // Health says nothing to a caller without a nonce: the same 404 as any
+    // unknown path, so a port scan cannot tell this server apart. With a
+    // nonce it gives only the proof (an HMAC with the secret in server.json).
+    const nonce = url.pathname === '/api/health' && req.method === 'GET' ? url.searchParams.get('nonce') : null;
+    if (nonce && /^[0-9a-f]{32}$/.test(nonce)) return sendJson(res, 200, { proof: healthProof(state.secret, nonce) });
     if (url.pathname === '/api/pages') return req.method === 'GET' ? pageList(state, res) : fail(res, 405, 'use GET');
     if (url.pathname === PAIR_PATH) return req.method === 'POST' ? pairDevice(state, req, res).catch(failed) : fail(res, 405, 'use POST');
     if (url.pathname === CONFIG_PATH) {
@@ -365,7 +367,7 @@ function handler(state) {
     }
     if (url.pathname.startsWith('/api/')) return fail(res, 404, 'not found');
     if (req.method !== 'GET' && req.method !== 'HEAD') return fail(res, 405, 'read only');
-    const app = appRoute(url.pathname);
+    const app = appRoute(url.pathname, { pwa: readConfig(state.home).pwa !== false });
     if (app) return serveApp(app, req, res);
     return serveFile(state.root, url, req, res);
   };
@@ -395,6 +397,8 @@ export function startLibraryServer({
     if (timer) clearInterval(timer);
     if (sweeper) clearInterval(sweeper);
     clearServerState(home, state.instance);
+    // This server's paired devices end with it (see pairing.mjs).
+    try { endSessions(home, { end: state.instance }); } catch { /* the library is busy: the next start revokes them */ }
     if (!server.listening) { closed(); markStopped(); return; }
     server.close(() => { closed(); markStopped(); });
     server.closeIdleConnections?.();
@@ -404,6 +408,8 @@ export function startLibraryServer({
     server.listen(port, HOST, () => {
       state.port = server.address().port;
       if (writeState) {
+        // Whatever served this home before is over, crashed or not: its devices are revoked.
+        endSessions(home, { keep: state.instance });
         // launch's redirect files go once their code expires, even if never used.
         sweeper = setInterval(() => sweepOpenFiles(home), SWEEP_MS);
         sweeper.unref();

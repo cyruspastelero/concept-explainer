@@ -45,13 +45,13 @@ export function publish(data, file, opts, style) {
 async function installLauncherCommand(opts) {
   const { version } = JSON.parse(readPackage(new URL('../../../package.json', import.meta.url), 'utf8'));
   // The library's own random port, before anything is tied to it.
-  const { port, created } = await ensureServePort(home());
+  await ensureServePort(home());
   const result = asUsage(() => installLauncher({
-    home: home(), nodePath: opts.node, targetDir: opts['launcher-dir'], force: Boolean(opts.force), version,
+    home: home(), nodePath: opts.node, targetDir: opts['launcher-dir'], force: Boolean(opts.force), pwa: Boolean(opts.pwa), version,
   }));
   result.files.forEach((path) => err(`✔ wrote ${path}\n`));
   result.warnings.forEach((w) => err(`  ⚠ ${w}\n`));
-  err(`  ${created ? 'picked' : 'uses'} port ${port} for the library (kept in config.json; other accounts cannot read it)\n`);
+  err('  the library uses a private random port stored in config.json\n');
   err('  click it to open your library; it starts the server and stops it after 30 idle minutes\n');
 }
 
@@ -123,7 +123,10 @@ const LIBRARY = {
       return;
     }
     if (served.warning) err(`  ⚠ ${served.warning}\n`);
-    out(`Serving ${home()} on 127.0.0.1 only.\nOpen: ${served.url}\nSettings can save while this runs. ${idleMinutes ? `Stops after ${idleMinutes} idle minutes, or` : 'Press'} Ctrl+C to stop.\n`);
+    const open = process.env.CONCEPT_EXPLAINER_LAUNCHED === '1'
+      ? 'Open: started by the app launcher; details are not written to this log.\n'
+      : `Open: ${served.url}\n`;
+    out(`Serving ${home()} on 127.0.0.1 only.\n${open}Settings can save while this runs. ${idleMinutes ? `Stops after ${idleMinutes} idle minutes, or` : 'Press'} Ctrl+C to stop.\n`);
     const stop = () => served.close();
     process.once('SIGINT', stop);
     process.once('SIGTERM', stop);

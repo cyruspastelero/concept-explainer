@@ -13,7 +13,7 @@ test('defaults cover every documented key', () => {
   assert.deepEqual(CONFIG_DEFAULTS, {
     style: 'clean', defaultType: 'auto', audience: 'engineer', depth: 'standard', language: 'en', visuals: [],
     chapters: {}, quiz: true, analogies: true, codeWalkthrough: 'auto', model: 'auto', budgetUsd: null, confirmBeforeStart: true, instructions: '',
-    servePort: null, serveIdleMinutes: null, deviceTokenDays: 30,
+    servePort: null, serveIdleMinutes: null, deviceTokenDays: 30, pwa: true,
   });
 });
 
@@ -27,6 +27,7 @@ test('the serve port and idle minutes are checked', () => {
   assert.ok(validateConfig({ serveIdleMinutes: 2000 }).errors.some((e) => /0 to 1440/.test(e)));
   assert.equal(parseConfigValue('servePort', '5000'), 5000);
   assert.equal(parseConfigValue('serveIdleMinutes', 'none'), null);
+  assert.equal(parseConfigValue('pwa', 'off'), false);
 });
 
 test('validateConfig accepts good values and names every bad one', () => {

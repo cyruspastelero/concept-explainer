@@ -136,9 +136,10 @@ test('a stored token that is not 64 hex is ignored; forget removes it', () => {
 });
 
 test('when the server does not answer, the page reads offline and server controls are off', async () => {
-  const p = page('http://127.0.0.1:41873/index.html', { fetchFn: async (u) => { if (u === '/api/health') throw new TypeError('offline'); return { ok: true }; } });
+  const p = page('http://127.0.0.1:41873/index.html', { fetchFn: async (u) => { if (u === '/api/pages') throw new TypeError('offline'); return { ok: true }; } });
   p.api.startPage(() => {});
   await settle();
+  assert.ok(p.calls.some(([url]) => url === '/api/pages'), 'the uncached page-list endpoint checks whether the server is online');
   assert.equal(p.api.PWA.offline, true);
   assert.equal(p.document.documentElement.dataset.offline, 'true');
   assert.match(JSON.stringify(p.document.body.children), /Reading offline\. Start Concept Explainer to save settings or import\./);

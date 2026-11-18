@@ -39,9 +39,13 @@ export function clearServerState(home, instance) {
 /** The proof a server gives for a nonce: HMAC-SHA256 of the nonce with its secret. */
 export const healthProof = (secret, nonce) => createHmac('sha256', secret).update(nonce).digest('hex');
 
-/** GET /api/health on 127.0.0.1:port (with `?nonce=` when given). Resolves to the parsed body, or null. */
-export function fetchHealth(port, { timeoutMs = 1000, nonce } = {}) {
-  const path = nonce ? `/api/health?nonce=${nonce}` : '/api/health';
+/**
+ * GET /api/health?nonce=<nonce> on 127.0.0.1:port. Resolves to `{ proof }`, or
+ * null. Without a nonce the server answers 404 like any unknown path, so a
+ * nonce is always sent (a fresh one when none is given).
+ */
+export function fetchHealth(port, { timeoutMs = 1000, nonce = randomBytes(16).toString('hex') } = {}) {
+  const path = `/api/health?nonce=${nonce}`;
   return new Promise((done) => {
     const req = request({ host: '127.0.0.1', port, path, headers: { host: `127.0.0.1:${port}` }, timeout: timeoutMs }, (res) => {
       let body = '';
@@ -50,7 +54,7 @@ export function fetchHealth(port, { timeoutMs = 1000, nonce } = {}) {
       res.on('end', () => {
         try {
           const parsed = JSON.parse(body);
-          done(res.statusCode === 200 && parsed && parsed.app === APP_NAME ? parsed : null);
+          done(res.statusCode === 200 && parsed && typeof parsed.proof === 'string' ? parsed : null);
         } catch {
           done(null);
         }
@@ -73,8 +77,8 @@ function processAlive(pid) {
 
 /**
  * Prove that the server on `port` is the one this home started: its pid
- * lives, its instance matches server.json, and it answers a fresh nonce with
- * the HMAC of the secret only server.json (0600) holds. Anything else, even
+ * lives and it answers a fresh nonce with the HMAC of the secret only
+ * server.json (0600) holds, which is per instance. Anything else, even
  * a perfect fingerprint, is an impostor and never gets a pairing code.
  * @returns {Promise<object|null>} the server state when proven
  */
@@ -83,7 +87,7 @@ export async function verifyServer(home, port) {
   if (!state || state.port !== port || typeof state.secret !== 'string' || !processAlive(state.pid)) return null;
   const nonce = randomBytes(16).toString('hex');
   const health = await fetchHealth(port, { nonce });
-  if (!health || health.instance !== state.instance || typeof health.proof !== 'string') return null;
+  if (!health) return null;
   const given = Buffer.from(health.proof);
   const expected = Buffer.from(healthProof(state.secret, nonce));
   return given.length === expected.length && timingSafeEqual(given, expected) ? state : null;

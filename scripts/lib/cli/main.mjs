@@ -31,6 +31,7 @@ const OPTIONS = {
   'forget-devices': { type: 'boolean' },
   'new-port': { type: 'boolean' },
   launcher: { type: 'boolean' },
+  pwa: { type: 'boolean' },
   tag: { type: 'string' },
   stack: { type: 'string' },
   search: { type: 'string' },

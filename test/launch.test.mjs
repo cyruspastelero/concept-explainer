@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { createServer } from 'node:net';
 import { createServer as createHttp } from 'node:http';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
@@ -7,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { launch } from '../scripts/lib/launch.mjs';
 import { fetchHealth, readServerState, verifyServer } from '../scripts/lib/serve-state.mjs';
-import { publishExplainer } from '../scripts/lib/library.mjs';
+import { publishExplainer, writeConfig } from '../scripts/lib/library.mjs';
 
 const example = JSON.parse(readFileSync(new URL('../examples/taskflow.explainer.json', import.meta.url), 'utf8'));
 
@@ -43,7 +44,15 @@ test('launch starts one detached server, waits for health, pairs and opens the h
     assert.equal(state.port, port);
     assert.notEqual(state.pid, process.pid, 'the server runs in its own process');
     assert.equal(state.idleMinutes, 30, 'a launched server stops when idle');
-    assert.equal((await fetchHealth(port)).instance, state.instance);
+    const health = await fetchHealth(port);
+    assert.ok(health && health.proof);
+    assert.equal('instance' in health, false, 'health does not disclose a stable server identity');
+    assert.ok(await verifyServer(home, port));
+    if (process.platform !== 'win32') {
+      const command = execFileSync('ps', ['-p', String(state.pid), '-o', 'args='], { encoding: 'utf8' });
+      assert.doesNotMatch(command, /--port/, 'the server port is not a process argument');
+      assert.doesNotMatch(command, new RegExp(`(^|\\s)${port}(\\s|$)`));
+    }
     // The opener gets launch's private redirect file; the code is inside it, not in argv.
     assert.match(readFileSync(opened[0], 'utf8'), new RegExp(`http://127\\.0\\.0\\.1:${port}/index\\.html#pair=[0-9a-f]{16}\\.[0-9a-f]{64}`));
     const second = await launch({ home, port, opener: (url) => opened.push(url) });
@@ -53,6 +62,7 @@ test('launch starts one detached server, waits for health, pairs and opens the h
     const log = join(home, '.serve', 'serve.log');
     assert.ok(existsSync(log));
     assert.equal(statSync(log).mode & 0o777, 0o600);
+    assert.doesNotMatch(readFileSync(log, 'utf8'), /#token=/, 'the per-run token is not logged');
   } finally {
     await stop(home);
   }
@@ -74,11 +84,27 @@ test('a start lock left by a dead process is cleared', async () => {
   const home = library();
   const port = await freePort();
   mkdirSync(join(home, '.serve', 'start.lock'), { recursive: true });
-  writeFileSync(join(home, '.serve', 'start.lock', 'pid'), '2147483646');
+  writeFileSync(join(home, '.serve', 'start.lock', 'owner'), '2147483646:deadbeefdeadbeef');
   try {
     const result = await launch({ home, port, opener: () => {} });
     assert.equal(result.started, true);
     assert.ok(!existsSync(join(home, '.serve', 'start.lock')));
+  } finally {
+    await stop(home);
+  }
+});
+
+test('a proven server on a different configured port is not reused', async () => {
+  const home = library();
+  const runningPort = await freePort();
+  let configuredPort = await freePort();
+  while (configuredPort === runningPort) configuredPort = await freePort();
+  const opened = [];
+  try {
+    await launch({ home, port: runningPort, opener: () => {} });
+    writeConfig(home, { servePort: configuredPort });
+    await assert.rejects(launch({ home, opener: (file) => opened.push(file) }), /running on port .* not its configured port/);
+    assert.deepEqual(opened, [], 'no app page opens on the mismatched origin');
   } finally {
     await stop(home);
   }

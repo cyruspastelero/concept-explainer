@@ -4,13 +4,16 @@
 import { execFileSync } from 'node:child_process';
 import { isAbsolute, posix, win32 } from 'node:path';
 
+const systemRoot = (env) => env.SystemRoot || env.WINDIR || 'C:\\Windows';
+const systemProgram = (name, env) => win32.join(systemRoot(env), 'System32', name);
+
 /**
  * @param {string} platform process.platform
  * @param {string} path file to open
  * @returns {{ command: string, args: string[], ignoreExitCode: boolean }}
  */
-export function openCommand(platform, path) {
-  if (platform === 'win32') return { command: 'explorer.exe', args: [path], ignoreExitCode: true };
+export function openCommand(platform, path, env = process.env) {
+  if (platform === 'win32') return { command: systemProgram('explorer.exe', env), args: [path], ignoreExitCode: true };
   return { command: platform === 'darwin' ? 'open' : 'xdg-open', args: [path], ignoreExitCode: false };
 }
 
@@ -32,10 +35,10 @@ function run(command, args, ignoreExitCode, exec, label) {
  * @param {string} path
  * @param {{ platform?: string, exec?: typeof execFileSync }} [options]
  */
-export function openPath(path, { platform = process.platform, exec = execFileSync } = {}) {
+export function openPath(path, { platform = process.platform, exec = execFileSync, env = process.env } = {}) {
   // Absolute, so a name like "-n" reaches the program as a path, never an option.
   const absolute = (platform === 'win32' ? win32 : posix).resolve(path);
-  const { command, args, ignoreExitCode } = openCommand(platform, absolute);
+  const { command, args, ignoreExitCode } = openCommand(platform, absolute, env);
   run(command, args, ignoreExitCode, exec, path);
 }
 
@@ -53,7 +56,7 @@ export function openUrl(url, { platform = process.platform, exec = execFileSync,
     if (!isAbsolute(custom)) throw new Error('open: CONCEPT_EXPLAINER_OPENER must be an absolute path');
     return run(custom, [url], false, exec, url);
   }
-  const { command, args, ignoreExitCode } = openCommand(platform, url);
+  const { command, args, ignoreExitCode } = openCommand(platform, url, env);
   return run(command, args, ignoreExitCode, exec, url);
 }
 
@@ -72,7 +75,7 @@ export function openLaunchFile(path, { platform = process.platform, exec = execF
     if (!isAbsolute(custom)) throw new Error('open: CONCEPT_EXPLAINER_OPENER must be an absolute path');
     return run(custom, [path], false, exec, path);
   }
-  const { command, args, ignoreExitCode } = openCommand(platform, path);
+  const { command, args, ignoreExitCode } = openCommand(platform, path, env);
   return run(command, args, ignoreExitCode, exec, path);
 }
 
@@ -85,11 +88,12 @@ export function openLaunchFile(path, { platform = process.platform, exec = execF
  */
 export function notifyUser(message, { platform = process.platform, exec = execFileSync, env = process.env } = {}) {
   const text = String(message).slice(0, 1000);
+  const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const attempts = {
     darwin: [['/usr/bin/osascript', ['-e', 'on run argv', '-e', 'display alert "Concept Explainer" message (item 1 of argv)', '-e', 'end run', text]]],
-    win32: [['powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+    win32: [[win32.join(systemRoot(env), 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'), ['-NoProfile', '-NonInteractive', '-Command',
       'Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show($env:CE_MESSAGE, "Concept Explainer") | Out-Null']]],
-  }[platform] || [['notify-send', ['Concept Explainer', text]], ['zenity', ['--error', '--title=Concept Explainer', `--text=${text}`]]];
+  }[platform] || [['notify-send', ['Concept Explainer', escapedText]], ['zenity', ['--error', '--title=Concept Explainer', `--text=${escapedText}`]]];
   for (const [command, args] of attempts) {
     try {
       exec(command, args, { stdio: 'ignore', windowsHide: true, env: { ...env, CE_MESSAGE: text } });

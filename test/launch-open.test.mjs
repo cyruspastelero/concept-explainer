@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { request } from 'node:http';
 import { launch, sweepOpenFiles } from '../scripts/lib/launch.mjs';
 import { readServerState, verifyServer, PAIR_HEADER } from '../scripts/lib/serve-state.mjs';
-import { createPairCode, isDeviceToken, redeemPairCode, forgetDevices, PAIR_TTL_MS } from '../scripts/lib/pairing.mjs';
+import { createPairCode, isDeviceToken, openFileOf, redeemPairCode, forgetDevices, PAIR_TTL_MS } from '../scripts/lib/pairing.mjs';
 import { publishExplainer, writeConfig } from '../scripts/lib/library.mjs';
 
 const example = JSON.parse(readFileSync(new URL('../examples/taskflow.explainer.json', import.meta.url), 'utf8'));
@@ -63,7 +63,7 @@ test('launch opens a private redirect file: the opener argument never holds the 
       origin: `http://127.0.0.1:${port}`, 'content-type': 'application/json', [PAIR_HEADER]: '1', 'sec-fetch-site': 'same-origin',
     });
     assert.equal(res.status, 200, res.body);
-    assert.ok(isDeviceToken(home, JSON.parse(res.body).token));
+    assert.ok(isDeviceToken(home, JSON.parse(res.body).token, { instance: readServerState(home).instance }));
     assert.deepEqual(openFiles(home), [], 'the server deleted the redirect file once the code was used');
   } finally {
     await stop(home);
@@ -74,25 +74,28 @@ test('stale redirect files are swept: by launch, and once their code expires or 
   const home = library();
   const live = createPairCode(home);
   const liveId = live.split('.')[0];
-  writeFileSync(join(home, '.serve', `open-${liveId}.html`), 'x', { mode: 0o600 });
+  writeFileSync(openFileOf(home, live), 'x', { mode: 0o600 });
   writeFileSync(join(home, '.serve', 'open-0123456789abcdef.html'), 'x', { mode: 0o600 }); // no pair record left
-  const old = join(home, '.serve', `open-${createPairCode(home).split('.')[0]}.html`);
+  const expiredCode = createPairCode(home);
+  const old = openFileOf(home, expiredCode);
   writeFileSync(old, 'x', { mode: 0o600 });
   const past = (Date.now() - PAIR_TTL_MS - 5000) / 1000;
   utimesSync(old, past, past);
   sweepOpenFiles(home);
-  assert.deepEqual(openFiles(home), [`open-${liveId}.html`]);
+  assert.deepEqual(openFiles(home), [openFileOf(home, live).split(/[\\/]/).at(-1)]);
   sweepOpenFiles(home, { now: () => Date.now() + PAIR_TTL_MS + 1000 });
   assert.deepEqual(openFiles(home), [], 'after the code expires, its file goes too');
 });
 
-test('redeeming, even with a wrong secret, removes the redirect file of that code', () => {
+test('a wrong secret does not cancel the pairing code or remove its redirect file', () => {
   const home = library();
   const code = createPairCode(home);
   const [id] = code.split('.');
-  writeFileSync(join(home, '.serve', `open-${id}.html`), 'x', { mode: 0o600 });
+  const file = openFileOf(home, code);
+  writeFileSync(file, 'x', { mode: 0o600 });
   assert.throws(() => redeemPairCode(home, `${id}.${'0'.repeat(64)}`));
-  assert.ok(!existsSync(join(home, '.serve', `open-${id}.html`)));
+  assert.ok(existsSync(file));
+  assert.doesNotThrow(() => redeemPairCode(home, code));
 });
 
 test('device tokens expire after deviceTokenDays, are refreshed on use, and forget-devices revokes them', () => {

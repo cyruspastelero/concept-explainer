@@ -79,14 +79,15 @@ test('localhost is redirected to 127.0.0.1 so the app has one origin', async () 
   assert.equal((await send({ headers: { host: 'evil.example' } })).status, 403);
 });
 
-test('health says who is serving, with no token', async () => {
-  const res = await send({ path: '/api/health' });
-  assert.equal(res.status, 200);
-  const health = JSON.parse(res.body);
-  assert.equal(health.app, 'concept-explainer');
-  assert.equal(health.instance, served.instance);
-  assert.match(health.version, /^\d+\.\d+\.\d+/);
-  assert.doesNotMatch(res.body, /token|home|\/Users\//);
+test('health reveals no server identity without a nonce and only a proof with one', async () => {
+  const hidden = await send({ path: '/api/health' });
+  assert.equal(hidden.status, 404);
+  const challenged = await send({ path: `/api/health?nonce=${'a'.repeat(32)}` });
+  assert.equal(challenged.status, 200);
+  const health = JSON.parse(challenged.body);
+  assert.deepEqual(Object.keys(health), ['proof']);
+  assert.match(health.proof, /^[0-9a-f]{64}$/);
+  assert.doesNotMatch(challenged.body, /instance|version|token|home|\/Users\//);
 });
 
 test('the page list for offline reading names only pages', async () => {

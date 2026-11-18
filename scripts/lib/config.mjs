@@ -31,6 +31,7 @@ export const CONFIG_DEFAULTS = Object.freeze({
   servePort: null,
   serveIdleMinutes: null,
   deviceTokenDays: 30,
+  pwa: true,
 });
 
 export const CONFIG_KEYS = Object.keys(CONFIG_DEFAULTS);
@@ -46,7 +47,7 @@ const ENUMS = Object.freeze({
 });
 /** The allowed values of each choice setting. */
 export const CONFIG_ENUMS = ENUMS;
-const BOOLEANS = ['quiz', 'analogies', 'confirmBeforeStart'];
+const BOOLEANS = ['quiz', 'analogies', 'confirmBeforeStart', 'pwa'];
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const quote = (value) => JSON.stringify(value);

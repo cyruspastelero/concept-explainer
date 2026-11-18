@@ -38,7 +38,7 @@ test('a code works once and returns a device token stored only as its hash', () 
   assert.deepEqual(readdirSync(join(serveDir(home), 'pair')), [], 'used codes are deleted');
 });
 
-test('expired, wrong and malformed codes are refused, and a wrong guess burns the code', () => {
+test('expired and malformed codes are refused, and a wrong guess leaves the code usable', () => {
   const home = freshHome();
   let clock = 0;
   const expired = createPairCode(home, { now: () => clock });
@@ -47,7 +47,8 @@ test('expired, wrong and malformed codes are refused, and a wrong guess burns th
   const real = createPairCode(home);
   const [id] = real.split('.');
   assert.throws(() => redeemPairCode(home, `${id}.${'0'.repeat(64)}`), /unknown, used or expired/);
-  assert.throws(() => redeemPairCode(home, real), /unknown, used or expired/, 'one wrong guess deletes the code');
+  assert.match(redeemPairCode(home, real), /^[0-9a-f]{64}$/, 'a wrong guess does not delete the code');
+  assert.throws(() => redeemPairCode(home, real), /unknown, used or expired/, 'a valid code still works only once');
   ['', 'nope', '../../x.y', `${'a'.repeat(16)}.${'z'.repeat(64)}`, null].forEach((bad) => {
     assert.throws(() => redeemPairCode(home, bad), /unknown, used or expired/);
   });
