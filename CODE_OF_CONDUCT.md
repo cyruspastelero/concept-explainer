@@ -4,4 +4,4 @@ This project follows the [Contributor Covenant, version 2.1](https://www.contrib
 
 In short: be kind, assume good intent, and keep feedback about the work.
 
-Report unacceptable behaviour privately to the maintainer through a [GitHub security advisory](https://github.com/Cyvid7-Darus10/concept-explainer/security/advisories/new) or the email on the maintainer's GitHub profile.
+Report unacceptable behaviour privately to the maintainer through a [GitHub security advisory](https://github.com/cyruspastelero/concept-explainer/security/advisories/new) or the email on the maintainer's GitHub profile.

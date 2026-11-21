@@ -8,14 +8,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Cyvid7-Darus10/concept-explainer/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Cyvid7-Darus10/concept-explainer/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/cyruspastelero/concept-explainer/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/cyruspastelero/concept-explainer/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="License: Apache 2.0" src="https://img.shields.io/badge/license-Apache%202.0-d2430e"></a>
   <img alt="Node 18.3 or newer" src="https://img.shields.io/badge/node-%E2%89%A518.3-171717">
   <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-0-666666">
 </p>
 
 <p align="center">
-  <a href="https://cyvid7-darus10.github.io/concept-explainer/examples/taskflow.html"><b>Live demo</b></a>
+  <a href="https://cyruspastelero.github.io/concept-explainer/examples/taskflow.html"><b>Live demo</b></a>
   &nbsp;·&nbsp;
   <a href="#quick-start"><b>Quick start</b></a>
   &nbsp;·&nbsp;
@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <a href="https://cyvid7-darus10.github.io/concept-explainer/examples/taskflow.html"><img src="docs/media/demo.gif" alt="A Concept Explainer page: the Overview, the architecture map, stepping through a request, a code walkthrough and the quiz" width="860"></a>
+  <a href="https://cyruspastelero.github.io/concept-explainer/examples/taskflow.html"><img src="docs/media/demo.gif" alt="A Concept Explainer page: the Overview, the architecture map, stepping through a request, a code walkthrough and the quiz" width="860"></a>
 </p>
 
 ## Why
@@ -35,7 +35,7 @@ Concept Explainer has your agent do the reading, then **teach** the result: one 
 ## Quick start
 
 ```sh
-git clone https://github.com/Cyvid7-Darus10/concept-explainer ~/side/concept-explainer
+git clone https://github.com/cyruspastelero/concept-explainer ~/side/concept-explainer
 node ~/side/concept-explainer/bin/concept-explainer.mjs install
 ```
 
@@ -49,19 +49,19 @@ Then ask your agent:
 
 The agent follows [`SKILL.md`](SKILL.md): it works out the type, [shows the time and cost](docs/cost.md), waits for your go-ahead, builds the page and files it in your [library](docs/library.md). Any agent that can read a skill file and run Node can use it.
 
-No agent? Use the CLI directly with `npx github:Cyvid7-Darus10/concept-explainer`. See [commands](docs/commands.md).
+No agent? Use the CLI directly with `npx github:cyruspastelero/concept-explainer`. See [commands](docs/commands.md).
 
 ## What it can explain
 
 | Type | What you see | Example |
 |---|---|---|
-| `repo` | The architecture map, step-through request flows, the data model, what changed and why | [Taskflow](https://cyvid7-darus10.github.io/concept-explainer/examples/taskflow.html) |
-| `pr` | The problem, the diff file by file, the parts that move on the map, risks, rollout | [Cursor paging](https://cyvid7-darus10.github.io/concept-explainer/examples/pr-cursor-paging.html) |
+| `repo` | The architecture map, step-through request flows, the data model, what changed and why | [Taskflow](https://cyruspastelero.github.io/concept-explainer/examples/taskflow.html) |
+| `pr` | The problem, the diff file by file, the parts that move on the map, risks, rollout | [Cursor paging](https://cyruspastelero.github.io/concept-explainer/examples/pr-cursor-paging.html) |
 | `change` | What one commit or range moved and why, and what could break | |
-| `proposal` | Problem and goals, options side by side with the chosen one marked, rollout | [Live updates](https://cyvid7-darus10.github.io/concept-explainer/examples/proposal-live-updates.html) |
+| `proposal` | Problem and goals, options side by side with the chosen one marked, rollout | [Live updates](https://cyruspastelero.github.io/concept-explainer/examples/proposal-live-updates.html) |
 | `migration` | Before and after flows, the steps to get there, risks during the move | |
 | `incident` | A timeline from the record, how the failure flowed, causes, follow ups | |
-| `concept` | The idea in 2 to 6 parts, a diagram for each, a worked case, a quiz | [Idempotency keys](https://cyvid7-darus10.github.io/concept-explainer/examples/concept-idempotency-keys.html) |
+| `concept` | The idea in 2 to 6 parts, a diagram for each, a worked case, a quiz | [Idempotency keys](https://cyruspastelero.github.io/concept-explainer/examples/concept-idempotency-keys.html) |
 
 Each type's chapters: [`references/types.md`](references/types.md).
 

@@ -7,11 +7,11 @@ The CLI needs Node 18.3 or newer and has no dependencies. Run it with `npx`, or 
 ## A typical run
 
 ```sh
-npx github:Cyvid7-Darus10/concept-explainer estimate ./my-repo
-npx github:Cyvid7-Darus10/concept-explainer init ./my-repo
-npx github:Cyvid7-Darus10/concept-explainer init https://github.com/o/r/pull/7 --type pr --out pr.json
-npx github:Cyvid7-Darus10/concept-explainer diff ./my-repo --base main --data pr.json --write
-npx github:Cyvid7-Darus10/concept-explainer build pr.json --repo ./my-repo --strict --open
+npx github:cyruspastelero/concept-explainer estimate ./my-repo
+npx github:cyruspastelero/concept-explainer init ./my-repo
+npx github:cyruspastelero/concept-explainer init https://github.com/o/r/pull/7 --type pr --out pr.json
+npx github:cyruspastelero/concept-explainer diff ./my-repo --base main --data pr.json --write
+npx github:cyruspastelero/concept-explainer build pr.json --repo ./my-repo --strict --open
 ```
 
 The output is one HTML file you can commit, attach to a PR or host anywhere, plus a copy in your [library](library.md).
