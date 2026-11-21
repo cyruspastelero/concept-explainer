@@ -1,5 +1,13 @@
 # Security policy
 
+## At a glance
+
+- **Zero npm dependencies.** The CLI and the pages run on Node and the browser alone.
+- **Local only.** Your library lives in a private folder on your machine (`0700`). Pages make no request to anyone else: fonts are self-hosted, and each page carries a Content Security Policy that allows only its own code.
+- **`library serve`** binds to 127.0.0.1, needs a per-run token for every API call, checks Host and Origin, and never serves your library's data or settings.
+- **Content is data.** Text from repos, PRs, docs and imported bundles is evidence, never instructions: the skill does not follow instructions it finds there or run commands from them, and the CLI rejects hidden control characters. Git runs with the repo's own hooks, diff drivers and signature programs turned off.
+- **Secrets stay out.** The scanner reads env var **names** from example files only and never opens `.env`.
+
 ## Reporting a vulnerability
 
 Please report vulnerabilities privately through [GitHub security advisories](https://github.com/Cyvid7-Darus10/concept-explainer/security/advisories/new). Do not open a public issue. You should get a reply within 5 working days.
