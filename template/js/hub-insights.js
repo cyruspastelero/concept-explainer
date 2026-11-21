@@ -31,9 +31,9 @@ function insTotals(summary) {
     h('dt', null, label), h('dd', null, String(insNumber(totals[key]))), h('p', { class: 'ins-unit' }, plural(insNumber(totals[key]), one, many).replace(/^\d+ /, '')))));
 }
 
-function insExplainerRows(summary, titles) {
-  const rows = list(summary && summary.explainers).filter((e) => e && typeof e.slug === 'string');
-  if (!rows.length) return h('p', { class: 'empty' }, 'No open flags and no refresh due.');
+function insExplainerRows(view, titles) {
+  const rows = view.explainers;
+  if (!rows.length) return null;
   return h('ul', { class: 'rows ins-rows' }, rows.map((e) => h('li', { class: 'ins-row' },
     h('span', { class: 'row-title' }, softBreaks(text(titles.get(e.slug), e.slug))),
     h('span', { class: 'ins-facts' },
@@ -43,6 +43,51 @@ function insExplainerRows(summary, titles) {
       e.refresh === true && h('span', { class: 'ins-due' }, 'Refresh due')))));
 }
 
+/**
+ * One model for the whole view, so tiles, rows, the empty line and the nav
+ * count never disagree: from the live detail once fetched, else from the
+ * summary the hub embedded at its last rebuild.
+ */
+function insViewModel(summary, live) {
+  if (!live) {
+    const totals = (summary && summary.totals) || {};
+    return {
+      source: 'embedded', updatedAt: summary && summary.updatedAt,
+      totals: Object.fromEntries(INS_TOTALS.map(([key]) => [key, insNumber(totals[key])])),
+      explainers: list(summary && summary.explainers).filter((e) => e && typeof e.slug === 'string'),
+    };
+  }
+  const bySlug = new Map();
+  const row = (slug) => bySlug.get(slug) || bySlug.set(slug, { slug, explainMore: 0, explainMoreVotes: 0, weakQuiz: 0, openFlags: 0, refresh: false }).get(slug);
+  list(live.explainMore).forEach((item) => { const r = row(item.slug); r.explainMore += 1; r.explainMoreVotes += insNumber(item.n); });
+  list(live.weakQuiz).forEach((item) => { row(item.slug).weakQuiz += 1; });
+  list(live.refreshes).forEach((item) => { const r = row(item.slug); r.openFlags = insNumber(item.openFlags); r.refresh = true; });
+  return {
+    source: 'live', updatedAt: null,
+    totals: Object.fromEntries(INS_TOTALS.map(([key]) => [key, list(live[key]).length])),
+    explainers: [...bySlug.values()].filter((r) => typeof r.slug === 'string'),
+  };
+}
+
+const insAnything = (view) => Object.values(view.totals).some((n) => n > 0) || view.explainers.length > 0;
+
+/** The tiles, when the numbers date from, the per-explainer rows or the one empty line. */
+function insSummaryBlock(view, titles) {
+  const when = view.source === 'live'
+    ? 'Live from the library.'
+    : `As of the last library rebuild${view.updatedAt ? ` (${displayDate(view.updatedAt)})` : ''}. Votes sent since then show after the next rebuild, or here when the library is open.`;
+  return [
+    insTotals({ totals: view.totals }),
+    h('p', { class: 'ins-asof' }, when),
+    insAnything(view) ? insExplainerRows(view, titles) : h('p', { class: 'empty' }, 'No open flags and no refresh due.'),
+  ];
+}
+
+/** The sidebar and menu count follow the same model. */
+function insPaintNav(view) {
+  if (typeof document.querySelectorAll !== 'function') return;
+  document.querySelectorAll('a[data-nav="insights"] .nav-count').forEach((el) => { el.textContent = String(view.totals.explainMore); });
+}
 function insSection(title, items, render, emptyText) {
   return h('section', { class: 'panel ins-block' },
     h('div', { class: 'panel-bar' }, h('h2', null, title), h('span', null, String(items.length))),
@@ -75,17 +120,25 @@ function insTermItem(item) {
     h('span', { class: 'ins-n' }, `${plural(insNumber(item.n), 'lookup')} in ${plural(insNumber(item.explainers), 'explainer')}`))];
 }
 
+// Why a refresh is suggested, in words. The open flag count is in the head line.
+function insReason(reason) {
+  if (/^open flags?$/i.test(reason)) return null;
+  const days = String(reason).match(/older than (\d+) days/i);
+  if (days) return `Last built more than ${days[1]} days ago.`;
+  return `${reason.charAt(0).toUpperCase()}${reason.slice(1)}${/[.!?]$/.test(reason) ? '' : '.'}`;
+}
+
 function insRefreshItem(item, titles) {
+  const reasons = list(item.reasons).filter((r) => typeof r === 'string' && r.trim()).map(insReason).filter(Boolean);
   return [
-    h('p', { class: 'ins-head' }, h('b', null, softBreaks(insName(item, titles))), h('span', { class: 'ins-n' }, plural(insNumber(item.openFlags), 'open flag'))),
-    list(item.reasons).length > 0 && h('p', null, list(item.reasons).filter((r) => typeof r === 'string').join('. ')),
+    h('p', { class: 'ins-head' }, h('b', null, softBreaks(insName(item, titles))), h('span', { class: 'ins-n' }, `${plural(insNumber(item.openFlags), 'open flag')} from readers`)),
+    reasons.length > 0 && h('p', null, reasons.join(' ')),
     h('div', { class: 'btn-row' },
       text(item.prompt) && copyButton(() => item.prompt, 'Copy the agent prompt'),
       text(item.command) && copyButton(() => item.command, 'Copy the command')),
     text(item.command) && h('p', null, h('code', null, item.command)),
   ];
 }
-
 /** The detail lists from GET /api/insights. */
 function insDetail(insights, titles) {
   const d = insights || {};
@@ -113,15 +166,16 @@ function insMount(data, context, titles) {
   const summary = data && data.insights;
   if (!summary || typeof summary !== 'object') return null;
   const detail = h('div', { class: 'ins-detail', 'aria-live': 'polite' });
-  const totals = h('div', { class: 'ins-totals-slot' }, insTotals(summary));
+  const block = h('div', { class: 'ins-summary' });
+  const paint = (view) => { fill(block, ...insSummaryBlock(view, titles)); insPaintNav(view); };
+  const embedded = insViewModel(summary, null);
+  paint(embedded);
   const section = h('section', { class: 'view hub-view ins-view', 'data-view': 'insights', hidden: true, 'aria-labelledby': 'view-insights-title' },
     h('header', { class: 'view-head' },
       h('p', { class: 'eyebrow quiet' }, 'Library'),
       h('h1', { id: 'view-insights-title', tabindex: '-1' }, 'Insights'),
       h('p', { class: 'view-lead' }, 'Where readers needed more, from this library only. Each number says what it counts.')),
-    h('div', { class: 'view-body' }, totals,
-      h('p', { class: 'ins-asof' }, `Per explainer, as of the last library rebuild${summary.updatedAt ? ` (${displayDate(summary.updatedAt)})` : ''}.`),
-      insExplainerRows(summary, titles), detail));
+    h('div', { class: 'view-body' }, block, detail));
   function refresh() {
     const token = context && context.serve && context.serve.token ? context.serve.token : readStore('concept-explainer:device');
     if (!token || !/^https?:$/.test(window.location.protocol)) { fill(detail, insNoToken()); return; }
@@ -130,11 +184,10 @@ function insMount(data, context, titles) {
     serveFetch(withToken, serveApi(withToken, 'insights'))
       .then(({ json }) => {
         const live = (json && json.insights) || {};
-        // The tiles follow the live detail, which is newer than the embedded counts.
-        fill(totals, insTotals({ totals: Object.fromEntries(INS_TOTALS.map(([key]) => [key, list(live[key]).length])) }));
+        paint(insViewModel(summary, live));
         fill(detail, ...insDetail(live, titles));
       })
-      .catch((error) => fill(detail, h('p', { class: 'ins-error', role: 'status' }, `The details could not load: ${error.message}`), insNoToken()));
+      .catch((error) => { paint(embedded); fill(detail, h('p', { class: 'ins-error', role: 'status' }, `The details could not load: ${error.message}`), insNoToken()); });
   }
-  return { section, count: insNumber(summary.totals && summary.totals.explainMore), refresh };
+  return { section, count: embedded.totals.explainMore, refresh };
 }

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-dKjw8Ipz4S+3N83N+DF2ziKeIO5H2TlLiexgFUy9dMU=' 'sha256-jC1oKdi9SkPTscNBsO8YgMjn3jr2sWmsWAzbOX8btUY='; style-src 'sha256-B3mZ9fls9/kISPYo0bKwZlP1rMHryf09UhCX09BP9TM=' 'sha256-LmLhSVOBWPiGLyfBcRy+1sjddzJmItnOxbanLIYUh8Q='; style-src-attr 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-dKjw8Ipz4S+3N83N+DF2ziKeIO5H2TlLiexgFUy9dMU=' 'sha256-VDDgK3h9GH3OWO4c4PonerEIZ14Y8/kWJ1Z1r6uWoPc='; style-src 'sha256-1M/bAb+zcxj3rzhuitdegPpBywuNyPW/DLV9Gnp5RqI=' 'sha256-LmLhSVOBWPiGLyfBcRy+1sjddzJmItnOxbanLIYUh8Q='; style-src-attr 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="generator" content="concept-explainer">
 <meta name="color-scheme" content="light dark">
@@ -1436,6 +1436,89 @@ h4.viz-title { font-size: 17px; letter-spacing: -0.015em; }
 :root[data-style="playful"] .viz-link.is-on { stroke-width: 2.5; }
 :root[data-style="playful"] .viz-part.is-selected .viz-box { stroke-width: 3; }
 :root[data-style="playful"] .viz-dot { stroke-width: 2.5; }
+
+/* ---- learning.css ---- */
+/* The learning loop's page half: the "Was this clear?" control, the Overview
+   card "Changed since last time", the Settings rows and the hub's Insights view.
+   Quiet by design: hairline rings, ink text, var(--select) for the chosen vote,
+   small markers for status. Tokens only. */
+
+/* ---------- Was this clear? ---------- */
+.fb-panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; margin-block-start: 32px; padding-block-start: 16px; box-shadow: inset 0 1px 0 var(--line); }
+.fb-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding-block: 8px; }
+.fb-q { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; }
+.fb-what { min-width: 0; font-size: 15px; font-weight: 500; color: var(--ink); overflow-wrap: anywhere; }
+.fb-ask { font-size: 14px; color: var(--muted); }
+.fb-choices { display: inline-flex; flex-wrap: wrap; justify-self: start; gap: 2px; padding: 3px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--ring); }
+.fb-choice { min-height: 36px; padding: 0 12px; border: 0; border-radius: var(--radius-sm); background: none; font-size: 14px; color: var(--muted); }
+@media (hover: hover) { .fb-choice[aria-checked="false"]:hover { color: var(--ink); } }
+.fb-choice[aria-checked="true"] { background: var(--select-wash); color: var(--ink); font-weight: 500; box-shadow: var(--ring-accent); }
+.fb-choice[aria-checked="true"]::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-inline-end: 8px; border-radius: 1px; background: var(--select); vertical-align: 0.12em; }
+.fb-note { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; max-width: 560px; }
+.fb-note-label { font-size: 14px; color: var(--body); }
+.fb-note-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.fb-note-input {
+  flex: 1 1 220px; min-width: 0; min-height: 36px; padding: 0 12px; border: 0; border-radius: var(--radius);
+  background: var(--surface); box-shadow: var(--ring); font: inherit; font-size: 15px; color: var(--ink);
+}
+.fb-note-input:focus-visible { outline: none; box-shadow: var(--ring-ink); }
+.fb-status { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink); }
+.fb-status:empty { display: none; }
+.fb-status::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 9999px; background: var(--accent); }
+
+/* ---------- Overview: changed since last time ---------- */
+.lrn-changed { display: grid; grid-template-columns: minmax(0, 1fr); }
+.lrn-list { display: grid; grid-template-columns: minmax(0, 1fr); }
+.lrn-item { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 10px 16px; }
+.lrn-list > .lrn-item + .lrn-item { box-shadow: inset 0 1px 0 var(--line); }
+.lrn-because { display: inline-flex; align-items: center; gap: 6px; flex: none; font-family: var(--mono); font-size: 11.5px; letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--muted); }
+.lrn-because::before { content: ""; width: 6px; height: 6px; border-radius: 1px; box-shadow: inset 0 0 0 1px var(--muted); }
+.lrn-because.is-readers::before { background: var(--accent); box-shadow: none; }
+.lrn-what { flex: 1 1 260px; min-width: 0; color: var(--ink); overflow-wrap: anywhere; }
+.lrn-open { font-size: 14px; }
+.lrn-kept { display: grid; gap: 2px; padding-block-start: 6px; box-shadow: inset 0 1px 0 var(--line); }
+.lrn-kept .detail-label { padding-inline: 16px; }
+
+/* ---------- Settings ---------- */
+.lrn-forget { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.lrn-send-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.lrn-preview summary { cursor: pointer; font-size: 14px; color: var(--link); }
+.lrn-json { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: hidden; font-size: 12px; }
+.lrn-send-status { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); }
+.lrn-send-status:empty { display: none; }
+.lrn-mark { flex: none; width: 6px; height: 6px; border-radius: 9999px; }
+.lrn-mark.is-ok { background: var(--accent); }
+.lrn-mark.is-wait { box-shadow: inset 0 0 0 1.5px var(--muted); }
+
+/* ---------- Hub: Insights ---------- */
+.ins-totals { grid-template-columns: repeat(4, minmax(0, 1fr)); border-radius: var(--radius); background: var(--surface); box-shadow: var(--ring); }
+.ins-unit { font-size: 13px; color: var(--muted); }
+.ins-asof { font-size: 13.5px; color: var(--muted); }
+@media (max-width: 759px) { .ins-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ins-rows { border-radius: var(--radius); background: var(--surface); box-shadow: var(--ring); }
+.ins-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; padding: 12px 16px; }
+.ins-facts { display: flex; flex-wrap: wrap; gap: 2px 16px; font-size: 14px; color: var(--body); }
+.ins-due { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); }
+.ins-due::before { content: ""; width: 6px; height: 6px; border-radius: 1px; background: var(--accent); }
+.ins-detail { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--grid-gap); }
+.ins-block { display: grid; grid-template-columns: minmax(0, 1fr); }
+.ins-item { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 12px 16px; }
+.ins-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; min-width: 0; }
+.ins-head b { min-width: 0; overflow-wrap: anywhere; }
+.ins-n { font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ins-route { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.ins-notes { display: grid; gap: 4px; }
+.ins-notes li { padding-inline-start: 12px; box-shadow: inset 2px 0 0 var(--line); color: var(--body); overflow-wrap: anywhere; }
+.ins-empty, .ins-loading { padding: 14px 16px; color: var(--muted); }
+.ins-offline-body { display: grid; gap: 10px; padding: 14px 16px; color: var(--body); }
+.ins-error { padding: 14px 16px; color: var(--ink); }
+
+/* ---------- Playful ---------- */
+:root[data-style="playful"] :is(.fb-what, .ins-head b, .lrn-what) { font-weight: 800; }
+:root[data-style="playful"] :is(.lrn-because, .ins-n) { font-family: var(--sans); font-weight: 800; }
+:root[data-style="playful"] .fb-choice { font-weight: 700; }
+:root[data-style="playful"] .fb-choice[aria-checked="true"] { box-shadow: 0 0 0 2px var(--select); }
+:root[data-style="playful"] .fb-panel { box-shadow: inset 0 2px 0 var(--line); }
 
 /* ---- hub.css ---- */
 /* The library hub (template/js/library.js). */
@@ -6589,7 +6672,8 @@ function readingGroup(registry) {
     h('legend', { class: 'settings-legend' }, h('span', null, 'Reading'), h('span', { class: 'eyebrow quiet' }, 'This browser only')),
     settingRow('set-theme', 'Theme', labelled(themeSwitch(registry), 'set-theme'), 'System follows your device.'),
     settingRow('set-style', 'Style', labelled(styleSwitch(registry), 'set-style'), 'Clean is calm and grey. Playful is bright and rounded.'),
-    READING_PREFS.map((pref) => settingRow(`set-${pref.key}`, pref.label, labelled(readingSwitch(registry, pref), `set-${pref.key}`), pref.hint)));
+    READING_PREFS.map((pref) => settingRow(`set-${pref.key}`, pref.label, labelled(readingSwitch(registry, pref), `set-${pref.key}`), pref.hint)),
+    lrnReadingRows(registry));
 }
 
 function settingsView(registry, { context = {}, config = null, extra = [] } = {}) {
@@ -7257,6 +7341,638 @@ function importServed(context, status, out) {
   return importControls(drop, conflict);
 }
 
+// ---- signals.js ----
+// Reader signals: what this browser saw readers do, as counts and buckets,
+// for the next explainer run. Contract: references/learning-loop.md.
+// Recorded only on file:// and http://127.0.0.1:<port>, only while Settings >
+// Reading > "Help improve future explainers" is on. Kept in localStorage
+// (concept-explainer:signals:<key>, 32 KB) as pending deltas plus a random
+// batchId; sent to POST /api/signals under serve, downloaded from file://.
+// The state functions are pure (they return a new state); sigStart wires them.
+
+const SIG_PREFIX = 'concept-explainer:signals:';
+const SIG_LEARNING_KEY = 'concept-explainer:learning';
+const SIG_FORMAT = 'concept-explainer-signals';
+const SIG_CAP_BYTES = 32 * 1024;
+const SIG_BUCKETS = ['<30s', '30s-2m', '2-10m', '>10m'];
+const SIG_VOTES = ['clear', 'more', 'basic'];
+const SIG_NOTE_MAX = 140;
+const SIG_MAX_MISSES = 9;
+const SIG_SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+// Controls, bidi overrides and isolates, zero-width marks: never in a note.
+const SIG_HIDDEN = /[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁦-⁩﻿]/g;
+
+/** Recording is for this machine only: file:// pages and the local library. */
+function sigAllowedOrigin(loc) {
+  if (!loc) return false;
+  if (loc.protocol === 'file:') return true;
+  return loc.protocol === 'http:' && loc.hostname === '127.0.0.1';
+}
+
+/** The Reading toggle, default on. */
+function sigLearningOn() {
+  return readStore(SIG_LEARNING_KEY) !== 'off';
+}
+
+function sigBucket(ms) {
+  if (ms < 30 * 1000) return SIG_BUCKETS[0];
+  if (ms < 2 * 60 * 1000) return SIG_BUCKETS[1];
+  if (ms < 10 * 60 * 1000) return SIG_BUCKETS[2];
+  return SIG_BUCKETS[3];
+}
+
+const sigLarger = (a, b) => (SIG_BUCKETS.indexOf(a) >= SIG_BUCKETS.indexOf(b) ? a : b);
+
+function sigBatchId() {
+  const bytes = new Uint8Array(16);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) crypto.getRandomValues(bytes);
+  else bytes.forEach((_, i) => { bytes[i] = Math.floor(Math.random() * 256); });
+  return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function sigEmptyPending() {
+  return { sections: {}, quiz: {}, glossary: {}, hints: {} };
+}
+
+function sigFresh(build) {
+  return { v: 1, build, batchId: sigBatchId(), pending: sigEmptyPending(), votes: {}, quizSeen: {} };
+}
+
+/** A note as the server takes it: one line, at most 140 characters, no hidden characters. */
+function sigCleanNote(value) {
+  const note = String(value || '').replace(/[\r\n\t]+/g, ' ').replace(SIG_HIDDEN, '').trim();
+  return note ? note.slice(0, SIG_NOTE_MAX) : '';
+}
+
+/**
+ * Load this explainer's state. A different build keeps only the votes whose
+ * section kept its fingerprint, so a rewritten item never inherits old ones.
+ */
+function sigLoad(context) {
+  let saved = null;
+  try {
+    saved = JSON.parse(readStore(`${SIG_PREFIX}${context.key}`) || 'null');
+  } catch (error) {
+    saved = null;
+  }
+  if (!saved || saved.v !== 1 || typeof saved.batchId !== 'string') return sigFresh(context.build);
+  if (saved.build === context.build) return { ...sigFresh(context.build), ...saved };
+  const sections = context.sections || {};
+  const votes = Object.fromEntries(Object.entries(saved.votes || {}).filter(([route, v]) => v && sections[route] === v.fp));
+  return { ...sigFresh(context.build), votes };
+}
+
+/** One more view of a section; time is filled when the visit ends. */
+function sigView(state, route) {
+  const old = state.pending.sections[route] || { views: 0, finished: 0, time: null };
+  return { ...state, pending: { ...state.pending, sections: { ...state.pending.sections, [route]: { ...old, views: old.views + 1 } } } };
+}
+
+/** A visit ended after `ms`: keep the largest bucket of the batch. */
+function sigTime(state, route, ms) {
+  const old = state.pending.sections[route] || { views: 0, finished: 0, time: null };
+  const time = old.time ? sigLarger(old.time, sigBucket(ms)) : sigBucket(ms);
+  return { ...state, pending: { ...state.pending, sections: { ...state.pending.sections, [route]: { ...old, time } } } };
+}
+
+function sigFinished(state, route) {
+  const old = state.pending.sections[route] || { views: 0, finished: 0, time: null };
+  return { ...state, pending: { ...state.pending, sections: { ...state.pending.sections, [route]: { ...old, finished: old.finished + 1 } } } };
+}
+
+/** The reader's vote now (null clears it) and an optional note for more or basic. */
+function sigVote(state, route, fp, vote, note = '') {
+  const old = state.votes[route] && state.votes[route].fp === fp ? state.votes[route] : { fp, sent: null, now: null };
+  const now = SIG_VOTES.includes(vote) ? vote : null;
+  const kept = now === 'more' || now === 'basic' ? sigCleanNote(note) : '';
+  return { ...state, votes: { ...state.votes, [route]: { fp, sent: old.sent, now, ...(kept ? { note: kept } : {}) } } };
+}
+
+function sigLookup(state, kind, label) {
+  const bucket = state.pending[kind] || {};
+  return { ...state, pending: { ...state.pending, [kind]: { ...bucket, [label]: (bucket[label] || 0) + 1 } } };
+}
+
+/**
+ * Fold the quiz's saved answers into the pending counts. A question counts
+ * once, when it is resolved: answers, wrong first tries, misses and the wrong
+ * options picked. A reset quiz starts its questions over.
+ */
+function sigQuiz(state, saved, questions) {
+  const answers = list(saved && saved.answers);
+  let next = state;
+  questions.forEach((question, i) => {
+    const n = String(i + 1);
+    const answer = answers[i] || { tries: [], status: 'open' };
+    const resolved = answer.status === 'right' || answer.status === 'missed';
+    const seen = next.quizSeen[n] || { resolved: false };
+    if (!resolved || seen.resolved) {
+      if (!resolved && seen.resolved) next = { ...next, quizSeen: { ...next.quizSeen, [n]: { resolved: false } } };
+      return;
+    }
+    const tries = list(answer.tries).filter(Number.isInteger);
+    const wrong = tries.filter((t) => t !== question.answer);
+    const old = next.pending.quiz[n] || { answers: 0, firstWrong: 0, misses: 0, wrong: [] };
+    const item = {
+      answers: old.answers + 1,
+      firstWrong: old.firstWrong + (tries.length && tries[0] !== question.answer ? 1 : 0),
+      misses: Math.min(SIG_MAX_MISSES, old.misses + wrong.length),
+      wrong: [...old.wrong, ...wrong].slice(0, SIG_MAX_MISSES),
+    };
+    next = { ...next, pending: { ...next.pending, quiz: { ...next.pending.quiz, [n]: item } }, quizSeen: { ...next.quizSeen, [n]: { resolved: true } } };
+  });
+  return next;
+}
+
+/** Keep the store under 32 KB: drop the oldest counters first, votes last. */
+function sigCap(state, max = SIG_CAP_BYTES) {
+  let next = state;
+  const size = (s) => JSON.stringify(s).length;
+  const dropFirst = (kind) => {
+    const keys = Object.keys(next.pending[kind]);
+    if (!keys.length) return false;
+    const rest = { ...next.pending[kind] };
+    delete rest[keys[0]];
+    next = { ...next, pending: { ...next.pending, [kind]: rest } };
+    return true;
+  };
+  while (size(next) > max) {
+    if (!['hints', 'glossary', 'sections', 'quiz'].some(dropFirst)) break;
+  }
+  return next;
+}
+
+/** The section routes with something to send, in a stable order. */
+function sigRoutes(state, sections) {
+  const changedVotes = Object.entries(state.votes).filter(([, v]) => v.now !== v.sent).map(([route]) => route);
+  return [...new Set([...Object.keys(state.pending.sections), ...changedVotes])].filter((route) => typeof sections[route] === 'string');
+}
+
+/**
+ * The batch for this explainer, exactly as the server takes it, or null when
+ * there is nothing to send.
+ * @param {object} state this explainer's state
+ * @param {{ key: string, build: string, slug?: string, sections: object }} context the page context
+ * @param {string} date YYYY-MM-DD
+ */
+function sigBatch(state, context, date) {
+  const sections = context.sections || {};
+  const out = {};
+  sigRoutes(state, sections).forEach((route) => {
+    const counted = state.pending.sections[route] || { views: 0, finished: 0, time: null };
+    const vote = state.votes[route] && state.votes[route].fp === sections[route] && state.votes[route].now !== state.votes[route].sent ? state.votes[route] : null;
+    out[route] = {
+      fp: sections[route], views: counted.views, finished: counted.finished, time: counted.time || SIG_BUCKETS[0],
+      ...(vote ? { vote: { from: vote.sent, to: vote.now } } : {}),
+      ...(vote && vote.note && (vote.now === 'more' || vote.now === 'basic') ? { note: vote.note } : {}),
+    };
+  });
+  const quiz = Object.fromEntries(Object.entries(state.pending.quiz)
+    .filter(([n]) => typeof sections[`quiz/${n}`] === 'string')
+    .map(([n, q]) => [n, { fp: sections[`quiz/${n}`], ...q }]));
+  const lookups = {
+    ...(Object.keys(state.pending.glossary).length ? { glossary: state.pending.glossary } : {}),
+    ...(Object.keys(state.pending.hints).length ? { hints: state.pending.hints } : {}),
+  };
+  if (!Object.keys(out).length && !Object.keys(quiz).length && !Object.keys(lookups).length) return null;
+  const explainer = {
+    key: context.key, ...(SIG_SLUG.test(String(context.slug || '')) ? { slug: context.slug } : {}), build: context.build,
+    sections: out, quiz, lookups,
+  };
+  return { format: SIG_FORMAT, version: 1, batchId: state.batchId, date, explainers: [explainer] };
+}
+
+/** After the library answered 200: what was sent is settled, a new batch starts. */
+function sigAcked(state, batch) {
+  const sent = batch ? batch.explainers[0].sections : {};
+  const votes = Object.fromEntries(Object.entries(state.votes).map(([route, v]) => (sent[route] && sent[route].vote
+    ? [route, { ...v, sent: sent[route].vote.to }]
+    : [route, v])));
+  return { ...state, votes, pending: sigEmptyPending(), batchId: sigBatchId() };
+}
+
+/** How much is waiting, for Settings. */
+function sigPendingSummary(state, context) {
+  const batch = sigBatch(state, context, sigToday());
+  if (!batch) return { sections: 0, votes: 0, quiz: 0, lookups: 0, batch: null };
+  const ex = batch.explainers[0];
+  const lookups = Object.values(ex.lookups).reduce((sum, bucket) => sum + Object.values(bucket).reduce((a, b) => a + b, 0), 0);
+  return {
+    sections: Object.keys(ex.sections).length, votes: Object.values(ex.sections).filter((s) => s.vote).length,
+    quiz: Object.keys(ex.quiz).length, lookups, batch,
+  };
+}
+
+function sigToday() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** The device token (paired app) or the per-run token from the address. */
+function sigToken(context) {
+  return (context.serve && context.serve.token) || readStore('concept-explainer:device') || null;
+}
+
+/** Download name: the key as a file-safe slug. */
+function sigFileName(context) {
+  const base = String(context.key || 'explainer').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'explainer';
+  return `${base}.signals.json`;
+}
+
+/** Every key this origin recorded, deleted (Settings: "Delete what this browser recorded"). */
+function sigForgetAll() {
+  try {
+    const keys = [];
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (key && key.startsWith(SIG_PREFIX)) keys.push(key);
+    }
+    keys.forEach((key) => window.localStorage.removeItem(key));
+    return keys.length;
+  } catch (error) {
+    return 0;
+  }
+}
+
+// ---------- Wiring: route visits, quiz, lookups, sending ----------
+
+/** The section keys the current address names: the chapter, and the item when it has a key. */
+function sigRoutesNow(sections, hash) {
+  const parts = String(hash || '').replace(/^#/, '').split('/').filter(Boolean);
+  if (!parts.length) return [];
+  const keys = [parts[0], parts.length > 1 ? `${parts[0]}/${parts[1]}` : null].filter((k) => k && typeof sections[k] === 'string');
+  return [...new Set(keys)];
+}
+
+function sigTerm(data, hash) {
+  const match = String(hash || '').match(/^#glossary\/([^/]+)$/);
+  if (!match) return null;
+  let term = match[1];
+  try { term = decodeURIComponent(term); } catch (error) { return null; }
+  return list(data.glossary).some((g) => g && g.term === term) ? term : null;
+}
+
+/** POST the pending batch; pending is cleared only on 200. */
+function sigPost(context, batch, { keepalive = false } = {}) {
+  return fetch(serveApi(context, 'signals'), {
+    method: 'POST', keepalive, body: JSON.stringify(batch),
+    headers: { 'content-type': 'application/json', 'x-concept-explainer-token': sigToken(context) },
+  }).then((response) => response.text().then((body) => {
+    let json = null;
+    try { json = body ? JSON.parse(body) : null; } catch (error) { json = null; }
+    return { status: response.status, json };
+  }));
+}
+
+/**
+ * This page's recording state and what changes it: visits (views and time),
+ * glossary lookups, "?" hints, Next (finished) and quiz answers.
+ */
+function sigTracker(data, context) {
+  const sections = context.sections || {};
+  const box = { state: sigLoad(context), visits: new Map(), listeners: [] };
+  const save = () => { box.state = sigCap(box.state); writeStore(`${SIG_PREFIX}${context.key}`, JSON.stringify(box.state)); };
+  const endVisits = (keys, now) => keys.forEach((key) => { box.state = sigTime(box.state, key, now - box.visits.get(key)); });
+  function check() {
+    if (!sigLearningOn()) return;
+    const now = Date.now();
+    const keys = sigRoutesNow(sections, window.location.hash);
+    const gone = [...box.visits.keys()].filter((k) => !keys.includes(k));
+    const fresh = keys.filter((k) => !box.visits.has(k));
+    if (!gone.length && !fresh.length) return;
+    endVisits(gone, now);
+    box.visits = new Map([...[...box.visits].filter(([k]) => keys.includes(k)), ...fresh.map((k) => [k, now])]);
+    fresh.forEach((k) => { box.state = sigView(box.state, k); });
+    const term = fresh.length ? sigTerm(data, window.location.hash) : null;
+    if (term) box.state = sigLookup(box.state, 'glossary', term);
+    save();
+    box.listeners.forEach((fn) => fn(keys));
+  }
+  function syncQuiz() {
+    if (!sigLearningOn() || !list(data.quiz).length || typeof quizStoreKey !== 'function') return;
+    let saved = null;
+    try { saved = JSON.parse(readStore(quizStoreKey(data.meta)) || 'null'); } catch (error) { saved = null; }
+    const next = sigQuiz(box.state, saved, list(data.quiz));
+    if (next !== box.state) { box.state = next; save(); }
+  }
+  // Every visit so far ends now (and goes on from now): before a page hides.
+  function flush() {
+    const now = Date.now();
+    endVisits([...box.visits.keys()], now);
+    box.visits = new Map([...box.visits.keys()].map((k) => [k, now]));
+    syncQuiz();
+    save();
+  }
+  return { box, sections, save, check, syncQuiz, flush };
+}
+
+/** A "?" hint opened, or Next pressed at the end of a chapter. */
+function sigOnClick(tracker, target) {
+  const hint = target.closest('.trunc-hint');
+  const holder = hint && hint.closest('.truncatable');
+  const label = holder && holder.__trunc ? holder.__trunc.full : hint && hint.dataset && hint.dataset.full;
+  if (label && label.length <= 120) { tracker.box.state = sigLookup(tracker.box.state, 'hints', label); tracker.save(); }
+  const [chapter] = sigRoutesNow(tracker.sections, window.location.hash);
+  if (target.closest('.pager-link.is-next') && chapter) { tracker.box.state = sigFinished(tracker.box.state, chapter); tracker.save(); }
+}
+
+/** Send the pending batch; settled only on 200, kept (same batchId) otherwise. */
+function sigSend(tracker, context, { keepalive = false } = {}) {
+  if (!(window.location.protocol === 'http:' && sigToken(context))) return Promise.resolve({ ok: false, status: 0, message: 'Open this page from the library to send.' });
+  const batch = sigBatch(tracker.box.state, context, sigToday());
+  if (!batch) return Promise.resolve({ ok: true, status: 200, message: 'Nothing new to send.' });
+  return sigPost(context, batch, { keepalive }).then(({ status, json }) => {
+    if (status === 200) {
+      tracker.box.state = sigAcked(tracker.box.state, batch);
+      tracker.save();
+      return { ok: true, status, message: json && json.duplicate ? 'The library already had this batch.' : 'Sent to the library.' };
+    }
+    const reason = status === 503 ? 'The library is busy. It will be sent later.' : (json && json.error) || `The library answered ${status}.`;
+    return { ok: false, status, message: reason };
+  }).catch(() => ({ ok: false, status: 0, message: 'The library did not answer. It will be sent later.' }));
+}
+
+function sigListen(tracker, context) {
+  const onAction = (event) => {
+    const target = event.target && event.target.closest ? event.target : null;
+    if (sigLearningOn() && target && event.type === 'click') sigOnClick(tracker, target);
+    window.setTimeout(() => { tracker.check(); tracker.syncQuiz(); }, 0);
+  };
+  const onHide = () => {
+    if (!sigLearningOn()) return;
+    tracker.flush();
+    sigSend(tracker, context, { keepalive: true });
+  };
+  ['click', 'keyup'].forEach((type) => document.addEventListener(type, onAction, true));
+  window.addEventListener('hashchange', tracker.check);
+  window.addEventListener('pagehide', onHide);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') onHide(); });
+}
+
+/**
+ * Start recording for this page, or return null where recording never
+ * happens (a hosted copy). Every call re-checks the Reading toggle.
+ */
+function sigStart(data, context) {
+  if (!sigAllowedOrigin(window.location) || !context || !context.key || !context.build) return null;
+  const tracker = sigTracker(data, context);
+  const { box, sections } = tracker;
+  sigListen(tracker, context);
+  tracker.check();
+  return {
+    active: sigLearningOn,
+    served: () => window.location.protocol === 'http:' && Boolean(sigToken(context)),
+    check: tracker.check,
+    send: () => sigSend(tracker, context),
+    onRoute: (fn) => box.listeners.push(fn),
+    routesNow: () => sigRoutesNow(sections, window.location.hash),
+    fingerprint: (route) => sections[route] || null,
+    voteOf: (route) => (box.state.votes[route] && box.state.votes[route].fp === sections[route] ? box.state.votes[route] : null),
+    vote(route, vote, note) {
+      if (!sigLearningOn() || typeof sections[route] !== 'string') return false;
+      box.state = sigVote(box.state, route, sections[route], vote, note);
+      tracker.save();
+      return true;
+    },
+    summary: () => sigPendingSummary(box.state, context),
+    fileName: () => sigFileName(context),
+    forget() {
+      const n = sigForgetAll();
+      box.state = sigFresh(context.build);
+      box.visits = new Map();
+      return n;
+    },
+    state: () => box.state,
+  };
+}
+
+// ---- feedback.js ----
+// The reader's side of the learning loop: a quiet "Was this clear?" control
+// at the end of each chapter (and for the flow, idea, diagram or walkthrough
+// on show), the Overview card "Changed since last time", and the Settings
+// rows. Votes go to the recorder in signals.js; nothing here talks to a server.
+
+const FB_CHOICES = [
+  { vote: 'clear', label: 'Clear' },
+  { vote: 'more', label: 'Explain more' },
+  { vote: 'basic', label: 'Too basic' },
+];
+// Chapters whose items get their own control, and how to name the item on show.
+const FB_ITEMS = {
+  flows: { noun: 'This flow', items: (d) => list(d.flows).map((f) => [f.id, f.title]) },
+  concepts: { noun: 'This idea', items: (d) => list(d.concepts).map((c, i) => [String(i), c.title]) },
+  visuals: { noun: 'This diagram', items: (d) => list(d.diagrams).map((g) => [g.id, g.title]) },
+  code: { noun: 'This walkthrough', items: (d) => list(d.walkthroughs).map((w) => [w.id, w.title]) },
+};
+const FB = { uid: 0 };
+
+function fbUid(prefix) {
+  FB.uid += 1;
+  return `${prefix}-${FB.uid}`;
+}
+
+function fbStatusText(vote, recorder) {
+  if (!vote) return 'Vote cleared.';
+  return recorder.served()
+    ? 'Thanks. It goes to the library when you leave this page.'
+    : 'Thanks. Saved in this browser until you send it from Settings.';
+}
+
+/** The note field shown after Explain more or Too basic (one line, up to 140 characters). */
+function fbNoteField(id, onSave) {
+  const input = h('input', { class: 'fb-note-input', id, type: 'text', maxlength: 140, autocomplete: 'off', spellcheck: 'true' });
+  const save = h('button', { class: 'btn small', type: 'button', onclick: () => onSave(input.value) }, 'Save note');
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') { event.preventDefault(); onSave(input.value); }
+  });
+  const wrap = h('div', { class: 'fb-note', hidden: true },
+    h('label', { class: 'fb-note-label', for: id }, 'What would help? One line, optional.'), h('div', { class: 'fb-note-row' }, input, save));
+  return { wrap, input };
+}
+
+/**
+ * One "Was this clear?" row for whichever section route() names now.
+ * @returns {{ el: HTMLElement, paint: () => void }}
+ */
+function fbControl(recorder, { route, label }) {
+  const qid = fbUid('fb-q');
+  const what = h('span', { class: 'fb-what' });
+  const status = h('p', { class: 'fb-status', role: 'status', 'aria-live': 'polite' });
+  const note = fbNoteField(fbUid('fb-note'), (value) => {
+    const current = recorder.voteOf(route());
+    if (!current || !current.now) return;
+    recorder.vote(route(), current.now, value);
+    fill(status, 'Note saved with your vote.');
+  });
+  const buttons = FB_CHOICES.map((choice) => h('button', { class: 'fb-choice', type: 'button', role: 'radio', 'aria-checked': 'false', 'data-vote': choice.vote }, choice.label));
+  function choose(vote) {
+    const current = recorder.voteOf(route());
+    const next = current && current.now === vote ? null : vote;
+    if (!recorder.vote(route(), next, '')) return;
+    paint();
+    fill(status, fbStatusText(next, recorder));
+  }
+  buttons.forEach((button, i) => {
+    button.addEventListener('click', () => choose(FB_CHOICES[i].vote));
+    button.addEventListener('keydown', (event) => {
+      const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+      if (!step) return;
+      event.preventDefault();
+      const next = (i + step + buttons.length) % buttons.length;
+      buttons[next].focus();
+      choose(FB_CHOICES[next].vote);
+    });
+  });
+  function paint() {
+    const current = recorder.voteOf(route());
+    const vote = current ? current.now : null;
+    fill(what, label());
+    buttons.forEach((button, i) => {
+      const on = FB_CHOICES[i].vote === vote;
+      button.setAttribute('aria-checked', String(on));
+      button.tabIndex = on || (!vote && i === 0) ? 0 : -1;
+    });
+    note.wrap.hidden = vote !== 'more' && vote !== 'basic';
+    if (!note.wrap.hidden && document.activeElement !== note.input) note.input.value = (current && current.note) || '';
+  }
+  // The row is a group named by what it asks about ("This flow: …", "This
+  // chapter"); its choices are named by the question and that same label.
+  const whatId = fbUid('fb-what');
+  what.setAttribute('id', whatId);
+  const el = h('div', { class: 'fb-row', role: 'group', 'aria-labelledby': whatId },
+    h('p', { class: 'fb-q' }, what, h('span', { class: 'fb-ask', id: qid }, 'Was this clear?')),
+    h('div', { class: 'fb-choices', role: 'radiogroup', 'aria-labelledby': `${qid} ${whatId}` }, buttons),
+    note.wrap, status);
+  paint();
+  return { el, paint };
+}
+
+/** The item a chapter shows now (from the address), else its first one. */
+function fbItemRoute(chapter, data, recorder) {
+  const now = recorder.routesNow().find((r) => r.startsWith(`${chapter}/`));
+  if (now) return now;
+  const first = FB_ITEMS[chapter].items(data).find(([id]) => recorder.fingerprint(`${chapter}/${linkPart(id)}`));
+  return first ? `${chapter}/${linkPart(first[0])}` : null;
+}
+
+function fbItemLabel(chapter, data, route) {
+  const id = decodeURIComponent(String(route).split('/')[1] || '');
+  const found = FB_ITEMS[chapter].items(data).find(([key]) => String(key) === id);
+  return `${FB_ITEMS[chapter].noun}: ${text(found && found[1], id)}`;
+}
+
+/**
+ * The feedback panel at the end of a chapter view: the item on show (for
+ * flows, ideas, diagrams and walkthroughs) and the chapter. Null where
+ * nothing is recorded (a hosted copy, learning off, or no section key).
+ */
+function fbChapterPanel(chapter, data, recorder) {
+  if (!recorder || !recorder.active() || !recorder.fingerprint(chapter)) return null;
+  const rows = [];
+  if (FB_ITEMS[chapter] && fbItemRoute(chapter, data, recorder)) {
+    const route = () => fbItemRoute(chapter, data, recorder);
+    rows.push(fbControl(recorder, { route, label: () => fbItemLabel(chapter, data, route()) }));
+  }
+  rows.push(fbControl(recorder, { route: () => chapter, label: () => 'This chapter' }));
+  recorder.onRoute(() => rows.forEach((row) => row.paint()));
+  return h('section', { class: 'fb-panel', 'aria-label': 'Was this clear?' }, rows.map((row) => row.el));
+}
+
+// ---------- Overview: changed since last time ----------
+const FB_BECAUSE = { readers: 'Readers asked', source: 'The source changed', notes: 'From the last run' };
+
+/** The Overview card listing what this build changed and why; null without changesSinceLast. */
+function lrnChangedCard(data) {
+  const since = data && data.changesSinceLast;
+  const items = list(since && since.items).filter((item) => item && text(item.what));
+  const kept = list(since && since.kept).filter((item) => item && text(item.reason));
+  if (!items.length && !kept.length) return null;
+  return h('section', { class: 'panel lrn-changed', 'aria-labelledby': 'lrn-changed-title' },
+    h('div', { class: 'panel-bar' }, h('h2', { id: 'lrn-changed-title' }, 'Changed since last time'), h('span', null, plural(items.length, 'change'))),
+    h('ul', { class: 'lrn-list' }, items.map((item) => h('li', { class: 'lrn-item' },
+      h('span', { class: `lrn-because is-${FB_BECAUSE[item.because] ? item.because : 'source'}` }, FB_BECAUSE[item.because] || 'Changed'),
+      h('span', { class: 'lrn-what' }, softBreaks(item.what)),
+      text(item.route) && h('a', { class: 'link lrn-open', href: `#${item.route}` }, 'Open')))),
+    kept.length > 0 && h('div', { class: 'lrn-kept' }, h('p', { class: 'detail-label' }, 'Kept as it was'),
+      h('ul', { class: 'lrn-list' }, kept.map((item) => h('li', { class: 'lrn-item' }, h('span', { class: 'lrn-what' }, softBreaks(item.reason)))))));
+}
+
+// ---------- Settings ----------
+const LRN_CHOICES = [{ choice: 'on', label: 'On' }, { choice: 'off', label: 'Off' }];
+
+/** Reading rows: the learning toggle and "Delete what this browser recorded". */
+function lrnReadingRows(registry) {
+  const status = h('p', { class: 'setting-hint', role: 'status', 'aria-live': 'polite' });
+  const toggle = choiceSwitch(registry, {
+    choices: LRN_CHOICES, read: () => (sigLearningOn() ? 'on' : 'off'), label: 'Help improve future explainers', className: 'theme-switch style-switch', withIcons: false,
+    write: (choice) => {
+      writeStore(SIG_LEARNING_KEY, choice);
+      fill(status, choice === 'off' ? 'Nothing new is recorded. What this browser already recorded stays until you delete it.' : 'Recording again, in this browser only.');
+    },
+  });
+  toggle.setAttribute('aria-labelledby', 'set-learning-label');
+  toggle.setAttribute('aria-describedby', 'set-learning-hint');
+  toggle.removeAttribute('aria-label');
+  const forget = h('button', {
+    class: 'btn small', type: 'button',
+    onclick: () => fill(status, `Deleted ${plural(sigForgetAll(), 'record')} from this browser.`),
+  }, 'Delete what this browser recorded');
+  return [
+    settingRow('set-learning', 'Help improve future explainers', toggle,
+      'Counts which parts you open, how long, your quiz tries and your "Was this clear?" votes, in this browser only. The library uses them to explain more where readers needed it.'),
+    h('div', { class: 'setting-row lrn-forget' }, forget, status),
+  ];
+}
+
+function lrnSummaryLine(summary) {
+  if (!summary.batch) return 'Nothing is waiting to be sent.';
+  return `Waiting to send: ${plural(summary.sections, 'section')}, ${plural(summary.votes, 'vote')}, ${plural(summary.quiz, 'quiz answer')}, ${plural(summary.lookups, 'lookup')}.`;
+}
+
+/** Served pages: Send now. file:// pages: the exact batch, a download and the import command. */
+function lrnSendGroup(recorder) {
+  if (!recorder) return null;
+  const line = h('p', { class: 'setting-hint lrn-waiting' });
+  const status = h('p', { class: 'lrn-send-status', role: 'status', 'aria-live': 'polite' });
+  const body = h('div', { class: 'lrn-send-body' });
+  const refresh = () => {
+    const summary = recorder.summary();
+    fill(line, lrnSummaryLine(summary));
+    fill(body, ...(recorder.served() ? lrnServedControls(recorder, status, refresh) : lrnFileControls(recorder, summary)));
+  };
+  window.addEventListener('hashchange', () => { if (window.location.hash === '#settings') refresh(); });
+  refresh();
+  return h('fieldset', { class: 'panel settings-group lrn-send' },
+    h('legend', { class: 'settings-legend' }, h('span', null, 'Feedback for the library'), h('span', { class: 'eyebrow quiet' }, 'Counts only')),
+    line, body, status);
+}
+
+function lrnServedControls(recorder, status, refresh) {
+  const button = h('button', { class: 'btn small', type: 'button' }, 'Send now');
+  button.addEventListener('click', () => {
+    button.disabled = true;
+    fill(status, 'Sending.');
+    recorder.send().then((out) => {
+      button.disabled = false;
+      fill(status, h('span', { class: `lrn-mark ${out.ok ? 'is-ok' : 'is-wait'}`, 'aria-hidden': 'true' }), out.message);
+      refresh();
+    });
+  });
+  return [h('div', { class: 'btn-row' }, button)];
+}
+
+function lrnFileControls(recorder, summary) {
+  if (!summary.batch) return [];
+  const json = JSON.stringify(summary.batch, null, 2);
+  const name = recorder.fileName();
+  return [
+    h('details', { class: 'lrn-preview' }, h('summary', null, 'Send feedback to the library: see exactly what goes'),
+      h('pre', { class: 'code lrn-json' }, json)),
+    h('div', { class: 'btn-row' }, h('button', { class: 'btn small', type: 'button', onclick: () => downloadBlob(name, `${json}\n`) }, 'Download feedback file')),
+    h('p', { class: 'setting-hint' }, 'Then run this where your library lives:'),
+    commandBlock([`${CLI_NAME} insights import ${name}`]),
+  ];
+}
+
 // ---- sections.js ----
 // Views without heavy interaction: the overview dashboard, where things
 // live (tree), glossary and runbook. Each returns { open(parts) } for the
@@ -7307,6 +8023,7 @@ function renderOverview(data, mount, ctx) {
         list(meta.stack).map((item) => h('li', null, tag(item))))),
     nextSlot,
     progressSlot,
+    lrnChangedCard(data),
     glancePanel(data),
     chapters.length > 0 && h('section', { class: 'ov-chapters', 'aria-labelledby': 'ov-chapters-title' },
       h('div', { class: 'ov-section-head' }, h('h2', { id: 'ov-chapters-title' }, 'Chapters'),
@@ -7607,6 +8324,7 @@ function chapterView(chapter, index, chapters, data, ctx) {
   const section = h('section', { class: 'view', 'data-view': chapter.key, hidden: true, 'aria-labelledby': `view-${chapter.key}-title` },
     viewHead(chapter.key, `Chapter ${index + 1} of ${chapters.length}`, chapter.title, chapter.lead),
     body,
+    fbChapterPanel(chapter.key, data, ctx.learning),
     pager(chapters, index));
   let controller = null;
   try {
@@ -7710,9 +8428,11 @@ function boot() {
   const viewed = viewedStore(data.meta);
   const registry = themeRegistry();
   const shell = buildShell(data, chapters, context, registry);
-  const ctx = { chapters, viewed, context };
+  // Reader signals for the next run (null on hosted copies): references/learning-loop.md.
+  const learning = sigStart(data, context);
+  const ctx = { chapters, viewed, context, learning };
   const views = [overviewView(data, ctx), ...chapters.map((c, i) => chapterView(c, i, chapters, data, ctx)),
-    settingsView(registry, { context, config: context.config || null, extra: [explainerShareGroup(data, context)] })];
+    settingsView(registry, { context, config: context.config || null, extra: [lrnSendGroup(learning), explainerShareGroup(data, context)] })];
   const meta = data.meta;
   const stamp = [meta.generatedAt && `Generated ${displayDate(meta.generatedAt)}`, meta.commit && `at ${String(meta.commit).slice(0, 7)}`].filter(Boolean).join(' ');
   const main = h('main', { id: 'main', class: 'main-col', tabindex: '-1' },

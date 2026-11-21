@@ -8,14 +8,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Cyvid7-Darus10/concept-explainer/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Cyvid7-Darus10/concept-explainer/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/cyruspastelero/concept-explainer/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/cyruspastelero/concept-explainer/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="License: Apache 2.0" src="https://img.shields.io/badge/license-Apache%202.0-d2430e"></a>
   <img alt="Node 18.3 or newer" src="https://img.shields.io/badge/node-%E2%89%A518.3-171717">
   <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-0-666666">
 </p>
 
 <p align="center">
-  <a href="https://cyvid7-darus10.github.io/concept-explainer/examples/taskflow.html"><b>Live demo</b></a>
+  <a href="https://cyruspastelero.github.io/concept-explainer/examples/taskflow.html"><b>Live demo</b></a>
   &nbsp;·&nbsp;
   <a href="#quick-start"><b>Quick start</b></a>
   &nbsp;·&nbsp;
@@ -29,7 +29,7 @@
 </p>
 
 <p align="center">
-  <a href="https://cyvid7-darus10.github.io/concept-explainer/examples/taskflow.html"><img src="docs/media/demo.gif" alt="A Concept Explainer page: the Overview, the architecture map, stepping through a request, a code walkthrough and the quiz" width="860"></a>
+  <a href="https://cyruspastelero.github.io/concept-explainer/examples/taskflow.html"><img src="docs/media/demo.gif" alt="A Concept Explainer page: the Overview, the architecture map, stepping through a request, a code walkthrough and the quiz" width="860"></a>
 </p>
 
 > Concept Explainer was called Repo Explainer. The `repo-explainer` command still works and prints a note, and your library moves from `~/.repo-explainer` to `~/.concept-explainer` on the first run, without deleting anything.
@@ -63,10 +63,10 @@ The agent works out what you gave it, then fills the same format. Your library c
 
 See one of each, built from the files in [`examples/`](examples/):
 
-- [Taskflow, a repo](https://cyvid7-darus10.github.io/concept-explainer/examples/taskflow.html): the map, request flows, the data model and a code walkthrough.
-- [Cursor paging, a PR](https://cyvid7-darus10.github.io/concept-explainer/examples/pr-cursor-paging.html): the diff file by file, the parts that moved, risks and rollout.
-- [Live task updates, a proposal](https://cyvid7-darus10.github.io/concept-explainer/examples/proposal-live-updates.html): options side by side, before and after, the rollout.
-- [Idempotency keys, a concept](https://cyvid7-darus10.github.io/concept-explainer/examples/concept-idempotency-keys.html): the idea in parts, a diagram for each, a transfer quiz.
+- [Taskflow, a repo](https://cyruspastelero.github.io/concept-explainer/examples/taskflow.html): the map, request flows, the data model and a code walkthrough.
+- [Cursor paging, a PR](https://cyruspastelero.github.io/concept-explainer/examples/pr-cursor-paging.html): the diff file by file, the parts that moved, risks and rollout.
+- [Live task updates, a proposal](https://cyruspastelero.github.io/concept-explainer/examples/proposal-live-updates.html): options side by side, before and after, the rollout.
+- [Idempotency keys, a concept](https://cyruspastelero.github.io/concept-explainer/examples/concept-idempotency-keys.html): the idea in parts, a diagram for each, a transfer quiz.
 
 ## Show it, don't tell it
 
@@ -135,7 +135,7 @@ It sizes the input by type: source files for a repo, changed lines for a PR (`--
 ### As an agent skill
 
 ```sh
-git clone https://github.com/Cyvid7-Darus10/concept-explainer ~/side/concept-explainer
+git clone https://github.com/cyruspastelero/concept-explainer ~/side/concept-explainer
 node ~/side/concept-explainer/bin/concept-explainer.mjs install
 ```
 
@@ -154,11 +154,11 @@ The agent follows [`SKILL.md`](SKILL.md): it identifies the type, estimates, wai
 ### From the command line
 
 ```sh
-npx github:Cyvid7-Darus10/concept-explainer estimate ./my-repo
-npx github:Cyvid7-Darus10/concept-explainer init ./my-repo
-npx github:Cyvid7-Darus10/concept-explainer init https://github.com/o/r/pull/7 --type pr --out pr.json
-npx github:Cyvid7-Darus10/concept-explainer diff ./my-repo --base main --data pr.json --write
-npx github:Cyvid7-Darus10/concept-explainer build pr.json --repo ./my-repo --strict --open
+npx github:cyruspastelero/concept-explainer estimate ./my-repo
+npx github:cyruspastelero/concept-explainer init ./my-repo
+npx github:cyruspastelero/concept-explainer init https://github.com/o/r/pull/7 --type pr --out pr.json
+npx github:cyruspastelero/concept-explainer diff ./my-repo --base main --data pr.json --write
+npx github:cyruspastelero/concept-explainer build pr.json --repo ./my-repo --strict --open
 ```
 
 Needs Node 18.3 or newer. Nothing to install. The output is one HTML file you can commit, attach to a PR, or host anywhere, plus a copy in your library.

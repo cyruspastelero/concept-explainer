@@ -18,7 +18,7 @@ const SKIP = [/^CHANGELOG\.md$/, /^docs\/plans\//, /^test\//, /^NOTICE$/];
 // Uses that are correct anywhere.
 const ALLOWED = [
   /"repo-explainer": "bin\/repo-explainer\.mjs"/g, // the alias bin in package.json
-  /Cyvid7-Darus10\/repo-explainer/g, // old GitHub URL (GitHub redirects it), allowed only in history
+  /cyruspastelero\/repo-explainer/g, // old GitHub URL (GitHub redirects it), allowed only in history
   /cyvid7-darus10\.github\.io\/repo-explainer/g,
   /repo-explainer:/g, // legacy browser storage keys, read once and moved
   /~?\/?\.repo-explainer\b/g, // the old library home, moved on first run
@@ -66,7 +66,7 @@ test('the sweep catches a missed rename and lets the allowed uses through', () =
   assert.equal(missesIn('SKILL.md', 'Run repo-explainer build.').length, 1);
   assert.equal(missesIn('SKILL.md', 'Formerly Repo Explainer.').length, 1, 'narrative lines only in the files that explain the rename');
   assert.deepEqual(missesIn('template/js/dom.js', "const LEGACY_PREFIX = 'repo-explainer:';"), []);
-  assert.deepEqual(missesIn('README.md', 'npx github:Cyvid7-Darus10/repo-explainer estimate'), []);
+  assert.deepEqual(missesIn('README.md', 'npx github:cyruspastelero/repo-explainer estimate'), []);
   assert.deepEqual(missesIn('README.md', 'Explain a repo explainer for a new engineer.'), []);
 });
 

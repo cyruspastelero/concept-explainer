@@ -86,9 +86,13 @@ function fbControl(recorder, { route, label }) {
     note.wrap.hidden = vote !== 'more' && vote !== 'basic';
     if (!note.wrap.hidden && document.activeElement !== note.input) note.input.value = (current && current.note) || '';
   }
-  const el = h('div', { class: 'fb-row' },
-    h('p', { class: 'fb-q', id: qid }, h('span', { class: 'fb-ask' }, 'Was this clear?'), what),
-    h('div', { class: 'fb-choices', role: 'radiogroup', 'aria-labelledby': qid }, buttons),
+  // The row is a group named by what it asks about ("This flow: …", "This
+  // chapter"); its choices are named by the question and that same label.
+  const whatId = fbUid('fb-what');
+  what.setAttribute('id', whatId);
+  const el = h('div', { class: 'fb-row', role: 'group', 'aria-labelledby': whatId },
+    h('p', { class: 'fb-q' }, what, h('span', { class: 'fb-ask', id: qid }, 'Was this clear?')),
+    h('div', { class: 'fb-choices', role: 'radiogroup', 'aria-labelledby': `${qid} ${whatId}` }, buttons),
     note.wrap, status);
   paint();
   return { el, paint };

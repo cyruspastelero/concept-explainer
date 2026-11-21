@@ -44,10 +44,15 @@ test('the control is a labelled radio group with one tab stop, arrows and a live
   assert.equal(rows.length, 2, 'the flow on show and the chapter');
   const [item, chapter] = rows;
   assert.match(item.textContent, /This flow: Create a task/, 'the first flow when the address names none');
+  [item, chapter].forEach((row) => {
+    assert.equal(row.getAttribute('role'), 'group');
+    const name = walk(row).find((el) => el.getAttribute('id') === row.getAttribute('aria-labelledby'));
+    assert.ok(name && /^This (flow|chapter)/.test(name.textContent), 'each row is a group named by a visible label');
+  });
   assert.match(chapter.textContent, /This chapter/);
   const group = walk(chapter).find((el) => el.getAttribute('role') === 'radiogroup');
-  const label = env.document.body.querySelectorAll('.fb-q').find((el) => el.getAttribute('id') === group.getAttribute('aria-labelledby'));
-  assert.ok(label && /Was this clear/.test(label.textContent), 'the group is named by its question');
+  const names = group.getAttribute('aria-labelledby').split(' ').map((id) => walk(chapter).find((el) => el.getAttribute('id') === id).textContent);
+  assert.deepEqual(names, ['Was this clear?', 'This chapter'], 'the choices are named by the question and the row');
   const radios = walk(group).filter((el) => el.getAttribute('role') === 'radio');
   assert.deepEqual(radios.map((r) => r.textContent), ['Clear', 'Explain more', 'Too basic']);
   assert.deepEqual(radios.map((r) => r.getAttribute('tabindex')), ['0', '-1', '-1'], 'one tab stop');
@@ -130,6 +135,10 @@ test('hub Insights: counts at once; from file:// the command to run, never detai
   assert.match(text, /Refresh due/);
   assert.match(text, /concept-explainer insights/);
   assert.doesNotMatch(text, /Show the queue/);
+  assert.match(text, /As of the last library rebuild/);
+  assert.doesNotMatch(text, /No open flags/, 'never the empty line while anything is counted');
+  const quiet = env.ctx.insMount({ insights: { updatedAt: SUMMARY.updatedAt, totals: { explainMore: 0, weakQuiz: 0, terms: 0, refreshes: 0 }, explainers: [] } }, {}, TITLES);
+  assert.match(quiet.section.textContent, /No open flags and no refresh due/);
   assert.equal(env.ctx.insMount({ insights: null }, {}, TITLES), null, 'learning off: no view');
 });
 
@@ -148,6 +157,10 @@ test('hub Insights: with a token, the detail lists, withheld titles as slugs, sa
   const text = view.section.textContent;
   assert.match(text, /3 votes/);
   assert.match(text, /Explain more2sections/, 'the tiles follow the live detail');
+  assert.match(text, /Live from the library/);
+  assert.match(text, /1 section to explain more \(3 votes\)/, 'the rows follow the live detail too');
+  assert.doesNotMatch(text, /No open flags/);
+  assert.doesNotMatch(text, /open flags\.|^open flags$/m, 'no bare reason line');
   assert.match(text, /Show the queue\./);
   assert.match(text, /Other/, 'a withheld title shows the slug name from the manifest');
   assert.match(text, /3 of 4 answers wrong on the first try\. Most picked wrong option: 1\./);

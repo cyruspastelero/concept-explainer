@@ -47,10 +47,10 @@
   "author": "Cyrus David Pastelero",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Cyvid7-Darus10/concept-explainer.git"
+    "url": "git+https://github.com/cyruspastelero/concept-explainer.git"
   },
   "bugs": {
-    "url": "https://github.com/Cyvid7-Darus10/concept-explainer/issues"
+    "url": "https://github.com/cyruspastelero/concept-explainer/issues"
   },
-  "homepage": "https://github.com/Cyvid7-Darus10/concept-explainer#readme"
+  "homepage": "https://github.com/cyruspastelero/concept-explainer#readme"
 }
