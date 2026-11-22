@@ -87,7 +87,7 @@ The absolute paths of node (`realpath` of the running node, or `--node`) and of 
 
 | Platform | Writes | Notes |
 |---|---|---|
-| macOS | `~/Applications/Concept Explainer.app`: `Contents/Info.plist` (bundle id `io.github.cyvid7-darus10.concept-explainer`, `LSUIElement`), `Contents/MacOS/concept-explainer` (0755 `/bin/sh`), `Contents/Resources/AppIcon.icns` | Every path single-quoted and escaped. If node or the CLI moved, it shows a native alert asking to reinstall. The icon comes from `sips` and `iconutil`; if they fail, the app works without it. |
+| macOS | `~/Applications/Concept Explainer.app`: `Contents/Info.plist` (bundle id `io.github.cyruspastelero.concept-explainer`, `LSUIElement`; an app with the old `io.github.cyvid7-darus10.concept-explainer` id is upgraded in place), `Contents/MacOS/concept-explainer` (0755 `/bin/sh`), `Contents/Resources/AppIcon.icns` | Every path single-quoted and escaped. If node or the CLI moved, it shows a native alert asking to reinstall. The icon comes from `sips` and `iconutil`; if they fail, the app works without it. |
 | Linux | `~/.local/share/applications/concept-explainer.desktop` and a 512 px icon in `icons/hicolor` (under `$XDG_DATA_HOME` when set) | `Exec` quoted per the Desktop Entry spec (double quotes, `" \` $ \` escaped, `%` doubled, backslashes escaped again). Runs `update-desktop-database` when present. |
 | Windows | `Concept Explainer.lnk` in the Start Menu, icon in `%LOCALAPPDATA%\concept-explainer\icon.ico` | Made by a constant PowerShell script (`WScript.Shell`); every path travels in an environment variable, never in the script. Minimized window. If PowerShell fails, install stops and reports it; there is no fallback. |
 

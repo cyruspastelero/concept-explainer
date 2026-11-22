@@ -145,6 +145,16 @@ test('an app bundle with another bundle id is refused', { skip: process.platform
   assert.throws(() => installLauncher({ home: s.home, platform: 'darwin', targetDir: s.target, nodePath: s.nodePath, binPath: s.binPath, run: () => {} }), /not this launcher's app/);
 });
 
+test('an app installed under the old bundle id upgrades to the current one', { skip: process.platform === 'win32' }, () => {
+  const s = setup();
+  const contents = join(s.target, 'Concept Explainer.app', 'Contents');
+  mkdirSync(contents, { recursive: true });
+  writeFileSync(join(contents, 'Info.plist'), '<plist><dict><key>CFBundleIdentifier</key><string>io.github.cyvid7-darus10.concept-explainer</string></dict></plist>');
+  installLauncher({ home: s.home, platform: 'darwin', targetDir: s.target, nodePath: s.nodePath, binPath: s.binPath, run: () => {}, force: true });
+  assert.equal(BUNDLE_ID, 'io.github.cyruspastelero.concept-explainer');
+  assert.match(readFileSync(join(contents, 'Info.plist'), 'utf8'), /io\.github\.cyruspastelero\.concept-explainer/);
+});
+
 test('uninstall removes exactly the recorded files whose hash still matches', () => {
   const s = setup();
   installLauncher({ home: s.home, platform: 'linux', targetDir: s.target, nodePath: s.nodePath, binPath: s.binPath, run: () => {} });

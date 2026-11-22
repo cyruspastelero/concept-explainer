@@ -16,7 +16,9 @@ import { readServerState, verifyServer } from './serve-state.mjs';
 import { writeAtomic, writeConfig } from './library.mjs';
 import { BIN_PATH } from './launch.mjs';
 
-export const BUNDLE_ID = 'io.github.cyvid7-darus10.concept-explainer';
+export const BUNDLE_ID = 'io.github.cyruspastelero.concept-explainer';
+// Bundle ids this launcher used before; an app carrying one is ours and gets upgraded in place.
+const LEGACY_BUNDLE_IDS = ['io.github.cyvid7-darus10.concept-explainer'];
 export const APP_NAME = 'Concept Explainer';
 const ASSETS = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'assets', 'app');
 const VERSION_MANAGERS = /[\\/](\.?mise|\.nvm|\.fnm|fnm|\.volta|\.asdf|\.nodenv|n[\\/]versions)[\\/]/;
@@ -189,7 +191,8 @@ function makeIcns(png, run) {
 function plan({ platform, targetDir, homeDir, env, paths, version, run, warnings }) {
   if (platform === 'darwin') {
     const app = join(targetDir || join(homeDir, 'Applications'), `${APP_NAME}.app`);
-    if (existsSync(app) && bundleIdOf(app) && bundleIdOf(app) !== BUNDLE_ID) throw new Error(`install --launcher: ${app} is not this launcher's app (bundle id ${bundleIdOf(app)})`);
+    const existingId = existsSync(app) ? bundleIdOf(app) : null;
+    if (existingId && existingId !== BUNDLE_ID && !LEGACY_BUNDLE_IDS.includes(existingId)) throw new Error(`install --launcher: ${app} is not this launcher's app (bundle id ${existingId})`);
     const icns = makeIcns(join(ASSETS, 'icon-1024.png'), run);
     if (!icns) warnings.push('could not make the app icon (sips or iconutil failed); the app works without one');
     return {
