@@ -18,6 +18,7 @@
     "references/",
     "rules/",
     "SKILL.md",
+    "LICENSE",
     "NOTICE"
   ],
   "scripts": {
@@ -43,7 +44,7 @@
     "documentation",
     "developer-experience"
   ],
-  "license": "Apache-2.0",
+  "license": "MIT",
   "author": "Cyrus David Pastelero",
   "repository": {
     "type": "git",

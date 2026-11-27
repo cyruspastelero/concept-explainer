@@ -4,5 +4,13 @@ Copyright 2026 Cyrus David Pastelero
 This product includes software developed by Cyrus David Pastelero
 (https://github.com/cyruspastelero/concept-explainer).
 
-Under the Apache License 2.0, if you redistribute this software or a work based on it,
-you must include this NOTICE file with it.
+Concept Explainer is licensed under the MIT License (see LICENSE). This file credits the
+third-party typefaces it bundles.
+
+The pages bundle these typefaces in fonts/, all licensed under the SIL Open Font License,
+Version 1.1. The full licence for each family is in fonts/OFL.txt.
+- Geist and Geist Mono, Copyright 2024 The Geist Project Authors
+  (https://github.com/vercel/geist-font).
+- Nunito, Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito).
+- JetBrains Mono, Copyright 2020 The JetBrains Mono Project Authors
+  (https://github.com/JetBrains/JetBrainsMono).
