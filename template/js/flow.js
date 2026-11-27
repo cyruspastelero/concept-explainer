@@ -135,8 +135,8 @@ function flowStepState(flows, state, stepIndex) {
 
 // Left and right arrows step through, except while typing.
 function wireFlowKeys(root, getState, go) {
-  root.addEventListener('keydown', (event) => {
-    if (event.target.closest('input, textarea')) return;
+  wireStepKeys(root, (event) => {
+    if (event.target.closest && event.target.closest('input, textarea')) return;
     const state = getState();
     if (event.key === 'ArrowRight') { event.preventDefault(); go(state.stepIndex + 1); }
     if (event.key === 'ArrowLeft') { event.preventDefault(); go(state.finished ? state.stepIndex : state.stepIndex - 1); }
@@ -184,6 +184,8 @@ function renderFlows(data, mount) {
     fill(headsWrap, diagram.heads);
     fill(bodyWrap, diagram.body);
     centerCurrentStep(bodyWrap, animate);
+    // New heads start unshifted; match the body even when no scroll event follows.
+    diagram.heads.style.transform = `translateX(${-bodyWrap.scrollLeft}px)`;
     fill(panel, ...(state.finished ? flowDonePanel(flow, go, nextFlow()) : flowStepPanel(data, flow, state.stepIndex, nodeIndex, go)));
     animateFlowStep(diagram, panel, layout, state, animate);
   }
@@ -272,7 +274,7 @@ function sequenceStep(step, i, currentIndex, xOf, width, go, col) {
     : { class: 'arrow', d, 'marker-end': `url(#seq-arrow-${status})` }),
   s('circle', { class: 'badge-bg', cx: x1, cy: y, r: 10 }),
   s('text', { class: 'badge-num', x: x1, y: y + 3.5, 'text-anchor': 'middle' }, String(i + 1)),
-  s('text', { class: 'label', x: labelX, y: y - 10, 'text-anchor': self ? 'start' : 'middle' }, label, s('title', null, step.label)));
+  s('text', { class: 'label', x: labelX, y: y - 14, 'text-anchor': self ? 'start' : 'middle' }, label, s('title', null, step.label)));
 
   if (i === 0) group.prepend(seqMarkers());
   if (status === 'is-current' && !reducedMotion()) {

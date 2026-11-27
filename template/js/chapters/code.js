@@ -208,7 +208,7 @@ function chCodeDoneCard(walk, lineCount, { replay, next }) {
 
 /** Arrow keys and j / k step through, outside fields, pickers and the progress bar. */
 function chCodeKeys(root, view) {
-  root.addEventListener('keydown', (event) => {
+  wireStepKeys(root, (event) => {
     if (event.altKey || event.ctrlKey || event.metaKey || (event.target.closest && event.target.closest('input, textarea, .ch-pick, .ch-code-dots'))) return;
     const { done, step } = view.state();
     if (event.key === 'ArrowRight' || event.key === 'j') { event.preventDefault(); if (!done) view.go(step + 1); }

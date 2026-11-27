@@ -186,7 +186,8 @@ function makeDocument(created) {
     createElement: (tag) => new FakeElement(tag),
     createElementNS: (ns, tag) => new FakeElement(tag, ns),
     createTextNode: (value) => new FakeText(value),
-    addEventListener() {},
+    listeners: {},
+    addEventListener(type, fn) { (this.listeners[type] = this.listeners[type] || []).push(fn); },
     getElementById: () => null,
   };
   doc.documentElement = new FakeElement('html');

@@ -55,6 +55,29 @@ test('code walkthrough: keys move steps, illustrative code is tagged, tokens sta
   assert.ok(!env.created.some((el) => ['img', 'script', 'b', 'i'].includes(el.localName)));
 });
 
+test('code walkthrough keys still work when focus sits on the view title, but not on another control', () => {
+  const env = loadChapters();
+  const { mount } = renderChapter(env, 'chRenderCode', EXAMPLES.concept);
+  const root = walk(mount).find((el) => el.classList.contains('ch-code-chapter'));
+  Object.defineProperty(root, 'isConnected', { value: true });
+  root.getClientRects = () => [{}];
+  const note = () => walk(mount).find((el) => el.classList.contains('ch-code-note')).textContent;
+  const pressOn = (target, key) => {
+    const event = { type: 'keydown', key, target, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+    (env.document.listeners.keydown || []).forEach((fn) => fn(event));
+  };
+  const title = env.document.createElement('h1');
+  title.setAttribute('tabindex', '-1');
+  env.document.body.append(title);
+  const button = env.document.createElement('button');
+  env.document.body.append(button);
+  const first = note();
+  pressOn(button, 'j');
+  assert.equal(note(), first);
+  pressOn(title, 'j');
+  assert.notEqual(note(), first);
+});
+
 test('a flow step or concept that cites covered code links to its walkthrough step', () => {
   const env = loadChapters();
   assert.equal(env.ctx.chWalkthroughFor(EXAMPLES.pr, 'packages/core/src/tasks/service.ts:58'), '#code/keyset-query/2');

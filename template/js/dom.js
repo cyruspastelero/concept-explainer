@@ -266,7 +266,20 @@ function wireSkipLink(main) {
   });
 }
 
-
+// Step keys for a player: they work while focus is inside it, and also while
+// nothing else that takes keys has focus (after a route change focus sits on
+// the view title; after a re-render it can drop to <body>). Only while the
+// player is on screen.
+function wireStepKeys(root, onKey) {
+  root.addEventListener('keydown', onKey);
+  document.addEventListener('keydown', (event) => {
+    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (!root.isConnected || !root.getClientRects().length) return;
+    const target = event.target && event.target.closest ? event.target : null;
+    if (target && (root.contains(target) || target.closest('a, button, input, select, textarea, [contenteditable], [role], [tabindex]:not([tabindex="-1"])'))) return;
+    onKey(event);
+  });
+}
 
 // ---------- Navigation state, shared by the explainer, the hub and the kit ----------
 // Mark the current item in every nav copy; in a visible sidebar, bring it
