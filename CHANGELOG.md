@@ -4,6 +4,10 @@ All notable changes to this project are documented here. This project follows [S
 
 ## Unreleased
 
+### Changed
+
+- **License is now MIT** (was Apache 2.0). `NOTICE` now only credits the bundled fonts: Geist, Geist Mono, Nunito and JetBrains Mono, all under the SIL Open Font License.
+
 ### Added
 
 - **App launcher.** `install --launcher` adds a macOS app, a Linux menu entry or a Windows Start Menu shortcut that runs `launch`; `uninstall --launcher` removes exactly what it wrote. `launch` starts or reuses the library server, pairs the browser with a one-time code and opens the hub. See `references/launcher.md`.
