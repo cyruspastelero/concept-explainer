@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-dKjw8Ipz4S+3N83N+DF2ziKeIO5H2TlLiexgFUy9dMU=' 'sha256-MNAiE8rmqoUQ9quC0/6HA/baal4mtifjpu9kiZ6eZ6c='; style-src 'sha256-PY6rU03l3eau9vqcZ7zbziuUXX+IQaNjR/jsOg5M+l0=' 'sha256-LmLhSVOBWPiGLyfBcRy+1sjddzJmItnOxbanLIYUh8Q='; style-src-attr 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-dKjw8Ipz4S+3N83N+DF2ziKeIO5H2TlLiexgFUy9dMU=' 'sha256-NfPG2ReYyZNOmt8d0UC1AO6jHBPJLqjceXh8T5lSQF0='; style-src 'sha256-NmphHd5lPdUnXApnH8qsryrPY1ul5A1tEJbgzbMTTyg=' 'sha256-LmLhSVOBWPiGLyfBcRy+1sjddzJmItnOxbanLIYUh8Q='; style-src-attr 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="generator" content="concept-explainer">
 <meta name="color-scheme" content="light dark">
@@ -44,7 +44,7 @@ try { var s = window.localStorage, r = document.documentElement, v;
   --primary-ring: 0 0 0 0 transparent; --good-wash: var(--surface); --bad-wash: var(--surface); --hair: 1px;
   --radius-sm: 4px; --page-zoom: 1; --body-weight: 400; --body-tracking: 0; --heading-weight: 450; --code-bg: var(--canvas);
   --code-ring: inset 0 0 0 var(--hair) var(--line); --code-ink: var(--body); --code-kw: var(--ink);
-  --code-cm: var(--quiet); --code-st: var(--accent-text); --mark-bg: rgb(252 94 50 / 0.16); --hint-bg: var(--surface); --hint-ring: var(--line); --hint-ink: var(--muted);
+  --code-cm: var(--muted); --code-st: var(--accent-text); --mark-bg: rgb(252 94 50 / 0.16); --hint-bg: var(--surface); --hint-ring: var(--line); --hint-ink: var(--muted);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -203,6 +203,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font: 500 10px/1 var(--mono); letter-spacing: 0; text-transform: none; cursor: help;
 }
 .trunc-hint::before { content: ""; position: absolute; inset: -4px; }
+@media (pointer: coarse) { .trunc-hint::before { inset: -14px; } }
 @media (hover: hover) { .trunc-hint:hover { color: var(--ink); box-shadow: inset 0 0 0 var(--hair) var(--faint); } }
 button.trunc-hint:focus-visible { outline-offset: 1px; }
 .trunc-tip {
@@ -753,7 +754,7 @@ textarea.field { width: 100%; min-height: 120px; padding: 10px 12px; line-height
   .step-body:has(> .step-code) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
 }
 /* Code in cards wraps: no sideways scroll inside a lesson card. */
-.step-card pre.code, .concept-card pre.code { white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: hidden; }
+.step-card pre.code, .concept-card pre.code { white-space: pre-wrap; overflow-wrap: break-word; overflow-x: hidden; }
 .step-body, .step-text { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .step-code { display: grid; gap: 8px; min-width: 0; }
 .step-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -771,6 +772,12 @@ textarea.field { width: 100%; min-height: 120px; padding: 10px 12px; line-height
 .step-dots button.is-done::before, .step-dots button.is-current::before { background: var(--accent); }
 .step-dots button:focus-visible { outline-offset: 0; }
 .kbd-hint { font-size: 13px; color: var(--muted); }
+/* Touch: bigger targets, and no keyboard tips. */
+@media (pointer: coarse) {
+  .kbd-hint { display: none; }
+  .step-dots button { height: 44px; }
+  .step-dots button::before { inset-block-start: 20px; }
+}
 .flow-done { display: grid; justify-items: center; gap: 8px; padding: 24px 8px; text-align: center; }
 .flow-done .trophy { display: grid; place-items: center; width: 56px; height: 56px; margin-block-end: 8px; border-radius: var(--radius); box-shadow: inset 0 0 0 var(--hair) var(--accent); color: var(--accent-text); }
 .flow-done .trophy svg { width: 28px; height: 28px; }
@@ -1285,7 +1292,8 @@ textarea.field { width: 100%; min-height: 120px; padding: 10px 12px; line-height
 button.ch-code-num { color: var(--muted); cursor: pointer; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; }
 @media (hover: hover) { button.ch-code-num:hover { color: var(--ink); text-decoration-color: var(--faint); } }
 button.ch-code-num:focus-visible { outline-offset: -2px; }
-.ch-code-text { min-width: 0; padding-inline-end: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (pointer: coarse) { button.ch-code-num { min-height: 44px; } }
+.ch-code-text { min-width: 0; padding-inline-end: 14px; white-space: pre-wrap; overflow-wrap: break-word; }
 .ch-code .kw { color: var(--code-kw); font-weight: 600; }
 .ch-code .cm { color: var(--code-cm); }
 .ch-code .st { color: var(--ink); }
@@ -1951,7 +1959,20 @@ function wireSkipLink(main) {
   });
 }
 
-
+// Step keys for a player: they work while focus is inside it, and also while
+// nothing else that takes keys has focus (after a route change focus sits on
+// the view title; after a re-render it can drop to <body>). Only while the
+// player is on screen.
+function wireStepKeys(root, onKey) {
+  root.addEventListener('keydown', onKey);
+  document.addEventListener('keydown', (event) => {
+    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (!root.isConnected || !root.getClientRects().length) return;
+    const target = event.target && event.target.closest ? event.target : null;
+    if (target && (root.contains(target) || target.closest('a, button, input, select, textarea, [contenteditable], [role], [tabindex]:not([tabindex="-1"])'))) return;
+    onKey(event);
+  });
+}
 
 // ---------- Navigation state, shared by the explainer, the hub and the kit ----------
 // Mark the current item in every nav copy; in a visible sidebar, bring it
@@ -3255,8 +3276,8 @@ function flowStepState(flows, state, stepIndex) {
 
 // Left and right arrows step through, except while typing.
 function wireFlowKeys(root, getState, go) {
-  root.addEventListener('keydown', (event) => {
-    if (event.target.closest('input, textarea')) return;
+  wireStepKeys(root, (event) => {
+    if (event.target.closest && event.target.closest('input, textarea')) return;
     const state = getState();
     if (event.key === 'ArrowRight') { event.preventDefault(); go(state.stepIndex + 1); }
     if (event.key === 'ArrowLeft') { event.preventDefault(); go(state.finished ? state.stepIndex : state.stepIndex - 1); }
@@ -3304,6 +3325,8 @@ function renderFlows(data, mount) {
     fill(headsWrap, diagram.heads);
     fill(bodyWrap, diagram.body);
     centerCurrentStep(bodyWrap, animate);
+    // New heads start unshifted; match the body even when no scroll event follows.
+    diagram.heads.style.transform = `translateX(${-bodyWrap.scrollLeft}px)`;
     fill(panel, ...(state.finished ? flowDonePanel(flow, go, nextFlow()) : flowStepPanel(data, flow, state.stepIndex, nodeIndex, go)));
     animateFlowStep(diagram, panel, layout, state, animate);
   }
@@ -3392,7 +3415,7 @@ function sequenceStep(step, i, currentIndex, xOf, width, go, col) {
     : { class: 'arrow', d, 'marker-end': `url(#seq-arrow-${status})` }),
   s('circle', { class: 'badge-bg', cx: x1, cy: y, r: 10 }),
   s('text', { class: 'badge-num', x: x1, y: y + 3.5, 'text-anchor': 'middle' }, String(i + 1)),
-  s('text', { class: 'label', x: labelX, y: y - 10, 'text-anchor': self ? 'start' : 'middle' }, label, s('title', null, step.label)));
+  s('text', { class: 'label', x: labelX, y: y - 14, 'text-anchor': self ? 'start' : 'middle' }, label, s('title', null, step.label)));
 
   if (i === 0) group.prepend(seqMarkers());
   if (status === 'is-current' && !reducedMotion()) {
@@ -5859,7 +5882,7 @@ function chCodeDoneCard(walk, lineCount, { replay, next }) {
 
 /** Arrow keys and j / k step through, outside fields, pickers and the progress bar. */
 function chCodeKeys(root, view) {
-  root.addEventListener('keydown', (event) => {
+  wireStepKeys(root, (event) => {
     if (event.altKey || event.ctrlKey || event.metaKey || (event.target.closest && event.target.closest('input, textarea, .ch-pick, .ch-code-dots'))) return;
     const { done, step } = view.state();
     if (event.key === 'ArrowRight' || event.key === 'j') { event.preventDefault(); if (!done) view.go(step + 1); }
@@ -6869,6 +6892,8 @@ const CONFIG_FIELDS = {
   confirmBeforeStart: { label: 'Confirm before starting', kind: 'onoff', help: 'Show the estimate and wait for a yes.' },
   instructions: { label: 'House instructions', kind: 'textarea', help: 'Plain text added to every run: house style, terms to use. Never overrides the truth rules.' },
 };
+// Ids that read badly as labels.
+const MULTI_LABELS = { beforeAfter: 'before and after' };
 const optionValues = (field) => field.options.map((o) => (typeof o === 'string' ? o : o.value));
 const CONFIG_FIELD_DEFAULTS = {
   style: 'clean', defaultType: 'auto', audience: 'engineer', depth: 'standard', language: 'en', visuals: [], chapters: {}, codeWalkthrough: 'auto',
@@ -6960,7 +6985,7 @@ function fieldControl(key, value, id, describedBy) {
   if (field.kind === 'multi') {
     const el = h('div', { class: 'multi', role: 'group', 'aria-labelledby': labelledBy, 'aria-describedby': describedBy },
       field.options.map((option) => h('label', { class: 'multi-option' },
-        h('input', { type: 'checkbox', name: key, value: option, checked: value.includes(option) }), h('span', null, option))));
+        h('input', { type: 'checkbox', name: key, value: option, checked: value.includes(option) }), h('span', null, MULTI_LABELS[option] || option))));
     return { el, read: () => [...el.querySelectorAll('input:checked')].map((input) => input.value), focus: () => el.querySelector('input').focus() };
   }
   if (field.kind === 'number') {
