@@ -19,7 +19,7 @@
   --primary-ring: 0 0 0 0 transparent; --good-wash: var(--surface); --bad-wash: var(--surface); --hair: 1px;
   --radius-sm: 4px; --page-zoom: 1; --body-weight: 400; --body-tracking: 0; --heading-weight: 450; --code-bg: var(--canvas);
   --code-ring: inset 0 0 0 var(--hair) var(--line); --code-ink: var(--body); --code-kw: var(--ink);
-  --code-cm: var(--quiet); --code-st: var(--accent-text); --mark-bg: rgb(252 94 50 / 0.16); --hint-bg: var(--surface); --hint-ring: var(--line); --hint-ink: var(--muted);
+  --code-cm: var(--muted); --code-st: var(--accent-text); --mark-bg: rgb(252 94 50 / 0.16); --hint-bg: var(--surface); --hint-ring: var(--line); --hint-ink: var(--muted);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -178,6 +178,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font: 500 10px/1 var(--mono); letter-spacing: 0; text-transform: none; cursor: help;
 }
 .trunc-hint::before { content: ""; position: absolute; inset: -4px; }
+@media (pointer: coarse) { .trunc-hint::before { inset: -14px; } }
 @media (hover: hover) { .trunc-hint:hover { color: var(--ink); box-shadow: inset 0 0 0 var(--hair) var(--faint); } }
 button.trunc-hint:focus-visible { outline-offset: 1px; }
 .trunc-tip {

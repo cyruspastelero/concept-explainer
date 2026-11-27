@@ -335,7 +335,8 @@
 button.ch-code-num { color: var(--muted); cursor: pointer; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; }
 @media (hover: hover) { button.ch-code-num:hover { color: var(--ink); text-decoration-color: var(--faint); } }
 button.ch-code-num:focus-visible { outline-offset: -2px; }
-.ch-code-text { min-width: 0; padding-inline-end: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (pointer: coarse) { button.ch-code-num { min-height: 44px; } }
+.ch-code-text { min-width: 0; padding-inline-end: 14px; white-space: pre-wrap; overflow-wrap: break-word; }
 .ch-code .kw { color: var(--code-kw); font-weight: 600; }
 .ch-code .cm { color: var(--code-cm); }
 .ch-code .st { color: var(--ink); }

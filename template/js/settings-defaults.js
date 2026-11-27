@@ -75,6 +75,8 @@ const CONFIG_FIELDS = {
   confirmBeforeStart: { label: 'Confirm before starting', kind: 'onoff', help: 'Show the estimate and wait for a yes.' },
   instructions: { label: 'House instructions', kind: 'textarea', help: 'Plain text added to every run: house style, terms to use. Never overrides the truth rules.' },
 };
+// Ids that read badly as labels.
+const MULTI_LABELS = { beforeAfter: 'before and after' };
 const optionValues = (field) => field.options.map((o) => (typeof o === 'string' ? o : o.value));
 const CONFIG_FIELD_DEFAULTS = {
   style: 'clean', defaultType: 'auto', audience: 'engineer', depth: 'standard', language: 'en', visuals: [], chapters: {}, codeWalkthrough: 'auto',
@@ -166,7 +168,7 @@ function fieldControl(key, value, id, describedBy) {
   if (field.kind === 'multi') {
     const el = h('div', { class: 'multi', role: 'group', 'aria-labelledby': labelledBy, 'aria-describedby': describedBy },
       field.options.map((option) => h('label', { class: 'multi-option' },
-        h('input', { type: 'checkbox', name: key, value: option, checked: value.includes(option) }), h('span', null, option))));
+        h('input', { type: 'checkbox', name: key, value: option, checked: value.includes(option) }), h('span', null, MULTI_LABELS[option] || option))));
     return { el, read: () => [...el.querySelectorAll('input:checked')].map((input) => input.value), focus: () => el.querySelector('input').focus() };
   }
   if (field.kind === 'number') {

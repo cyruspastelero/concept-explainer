@@ -117,7 +117,7 @@
   .step-body:has(> .step-code) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
 }
 /* Code in cards wraps: no sideways scroll inside a lesson card. */
-.step-card pre.code, .concept-card pre.code { white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: hidden; }
+.step-card pre.code, .concept-card pre.code { white-space: pre-wrap; overflow-wrap: break-word; overflow-x: hidden; }
 .step-body, .step-text { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .step-code { display: grid; gap: 8px; min-width: 0; }
 .step-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -135,6 +135,12 @@
 .step-dots button.is-done::before, .step-dots button.is-current::before { background: var(--accent); }
 .step-dots button:focus-visible { outline-offset: 0; }
 .kbd-hint { font-size: 13px; color: var(--muted); }
+/* Touch: bigger targets, and no keyboard tips. */
+@media (pointer: coarse) {
+  .kbd-hint { display: none; }
+  .step-dots button { height: 44px; }
+  .step-dots button::before { inset-block-start: 20px; }
+}
 .flow-done { display: grid; justify-items: center; gap: 8px; padding: 24px 8px; text-align: center; }
 .flow-done .trophy { display: grid; place-items: center; width: 56px; height: 56px; margin-block-end: 8px; border-radius: var(--radius); box-shadow: inset 0 0 0 var(--hair) var(--accent); color: var(--accent-text); }
 .flow-done .trophy svg { width: 28px; height: 28px; }
